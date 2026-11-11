@@ -43,6 +43,10 @@ interface DataContextType {
   logout: () => Promise<void>;
   selectedCalendarDate: string;
   setSelectedCalendarDate: (date: string) => void;
+  businessName: string;
+  pixKey: string;
+  pixReceiver: string;
+  updateBusinessSettings: (settings: { businessName?: string; pixKey?: string; pixReceiver?: string }) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -52,13 +56,55 @@ const STORAGE_KEYS = {
   CUSTOMERS: 'docegestao_local_customers',
   PRODUCTS: 'docegestao_local_products',
   EXPENSES: 'docegestao_local_expenses',
-  INIT_FLAG: 'docegestao_seeded_v1'
+  INIT_FLAG: 'docegestao_seeded_v1',
+  SETTINGS: 'docegestao_business_settings',
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const [businessName, setBusinessName] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (saved) return JSON.parse(saved).businessName || 'Espeto & Brasa - Espetinhos & Bebidas';
+    } catch {}
+    return 'Espeto & Brasa - Espetinhos & Bebidas';
+  });
+
+  const [pixKey, setPixKey] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (saved) return JSON.parse(saved).pixKey || '';
+    } catch {}
+    return '';
+  });
+
+  const [pixReceiver, setPixReceiver] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+      if (saved) return JSON.parse(saved).pixReceiver || '';
+    } catch {}
+    return '';
+  });
+
+  const updateBusinessSettings = (settings: { businessName?: string; pixKey?: string; pixReceiver?: string }) => {
+    if (settings.businessName !== undefined) setBusinessName(settings.businessName);
+    if (settings.pixKey !== undefined) setPixKey(settings.pixKey);
+    if (settings.pixReceiver !== undefined) setPixReceiver(settings.pixReceiver);
+
+    try {
+      const current = {
+        businessName: settings.businessName !== undefined ? settings.businessName : businessName,
+        pixKey: settings.pixKey !== undefined ? settings.pixKey : pixKey,
+        pixReceiver: settings.pixReceiver !== undefined ? settings.pixReceiver : pixReceiver,
+      };
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(current));
+    } catch (e) {
+      console.error('Error saving business settings:', e);
+    }
+  };
 
   const [sales, setSales] = useState<Sale[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -308,15 +354,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Auto-create or link customer if name provided
     if (fullSale.customerName && fullSale.customerName.trim() !== 'Cliente Balcão') {
-      const exists = customers.some(
+      const existing = customers.find(
         (c) => c.name.toLowerCase().trim() === fullSale.customerName.toLowerCase().trim()
       );
-      if (!exists) {
+      if (!existing) {
         saveCustomer({
           name: fullSale.customerName.trim(),
-          phone: fullSale.customerPhone,
-          notes: 'Criado automaticamente pelo pedido de doces',
+          phone: fullSale.customerPhone || '',
+          notes: 'Criado automaticamente pelo pedido de espetinhos e bebidas',
         }).catch(console.error);
+      } else if (fullSale.customerPhone && (!existing.phone || existing.phone !== fullSale.customerPhone)) {
+        // Automatically sync updated phone number to customer profile
+        saveCustomer(
+          {
+            ...existing,
+            phone: fullSale.customerPhone,
+          },
+          existing.id
+        ).catch(console.error);
       }
     }
 
@@ -467,8 +522,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fullExpense: Expense = {
       id: existingId || `exp-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       userId: user?.uid || 'local-user',
-      description: expenseData.description || 'Despesa Confeitaria',
-      category: expenseData.category || 'ingredientes',
+      description: expenseData.description || 'Despesa Espetos & Bebidas',
+      category: expenseData.category || 'carnes_insumos',
       amount: Number(expenseData.amount) || 0,
       date: expenseData.date || formatToDateInput(new Date()),
       paymentMethod: expenseData.paymentMethod || 'pix',
@@ -620,6 +675,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         selectedCalendarDate,
         setSelectedCalendarDate,
+        businessName,
+        pixKey,
+        pixReceiver,
+        updateBusinessSettings,
       }}
     >
       {children}

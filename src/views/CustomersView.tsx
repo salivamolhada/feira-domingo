@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { User, Plus, Search, Phone, MapPin, MessageCircle, Edit, Trash2, DollarSign } from 'lucide-react';
+import { User, Plus, Search, Phone, MapPin, MessageCircle, Edit, Trash2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { Customer } from '../types';
 import { formatCurrency } from '../utils/dateUtils';
+import { formatPhoneBR, getWhatsAppUrl } from '../utils/phoneUtils';
 
 interface CustomersViewProps {
   onOpenCustomerModal: () => void;
@@ -13,7 +14,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   onOpenCustomerModal,
   onEditCustomer,
 }) => {
-  const { customers, deleteCustomer, sales } = useData();
+  const { customers, deleteCustomer, sales, businessName, pixKey } = useData();
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   const filteredCustomers = customers.filter((c) => {
@@ -48,23 +49,27 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
   const openWhatsApp = (customer: Customer, totalPending: number) => {
     if (!customer.phone) return;
-    const cleanPhone = customer.phone.replace(/\D/g, '');
-    const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
 
-    let msg = `Olá ${customer.name}! Tudo bem? Passando para te mandar um abraço doce da nossa confeitaria 🧁✨`;
+    let msg = `Olá *${customer.name}*! Tudo bem? Passando para te mandar um alô do *${businessName || 'Espeto & Brasa'}* 🍢🔥\n`;
     if (totalPending > 0) {
-      msg += `\nLembramos que consta um saldo em aberto de ${formatCurrency(
+      msg += `\nLembramos com carinho que consta um saldo em aberto de *${formatCurrency(
         totalPending
-      )}. Deseja nossa chave Pix para acerto?`;
+      )}*.`;
+      if (pixKey) {
+        msg += `\n💳 *Chave Pix para acerto:* ${pixKey}`;
+      }
+      msg += `\nQualquer dúvida estamos à disposição! Muito obrigado(a)! 🙌`;
+    } else {
+      msg += `\nJá estamos preparando o carvão e os espetinhos fresquinhos para o próximo domingo! Gostaria de reservar os seus favoritos ou pedir bebidas bem geladas?`;
     }
-    const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const url = getWhatsAppUrl(customer.phone, msg);
+    if (url) window.open(url, '_blank');
   };
 
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-rose-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">👥</span>
@@ -73,14 +78,14 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-500 font-medium mt-0.5">
-            Mantenha contatos, histórico de compras de domingo e saldos a receber organizados
+            Mantenha contatos, telefones com WhatsApp, histórico de pedidos de domingo e saldos a receber
           </p>
         </div>
 
         <button
           type="button"
           onClick={onOpenCustomerModal}
-          className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-xs font-black shadow-md shadow-rose-200 transition-all flex items-center gap-1.5 self-start sm:self-auto"
+          className="px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-stone-950 font-black rounded-2xl text-xs shadow-md shadow-orange-950/20 hover:text-white transition-all flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Novo Cliente
@@ -88,7 +93,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white rounded-3xl p-4 border border-rose-100 shadow-sm flex items-center justify-between">
+      <div className="bg-white rounded-3xl p-4 border border-stone-200/80 shadow-xs flex items-center justify-between">
         <div className="w-full sm:w-80 relative">
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400">
             <Search className="w-4 h-4" />
@@ -98,7 +103,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             placeholder="Buscar por nome, telefone ou rua..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full text-xs font-medium pl-9 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl"
+            className="w-full text-xs font-semibold pl-9 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:border-orange-500"
           />
         </div>
         <span className="text-xs font-bold text-stone-500 hidden sm:inline">
@@ -114,15 +119,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           return (
             <div
               key={cust.id}
-              className="bg-white rounded-3xl p-5 border border-rose-100 hover:border-rose-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+              className="bg-white rounded-3xl p-5 border border-stone-200/90 hover:border-orange-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-100 to-amber-100 text-rose-700 flex items-center justify-center font-black text-sm">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-100 to-amber-100 text-orange-800 flex items-center justify-center font-black text-sm">
                     {cust.name.slice(0, 2).toUpperCase()}
                   </div>
                   {metrics.totalPending > 0 ? (
-                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black uppercase">
+                    <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-950 border border-amber-300 text-[10px] font-black uppercase">
                       Fiado: {formatCurrency(metrics.totalPending)}
                     </span>
                   ) : (
@@ -136,9 +141,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
                 <div className="mt-2 space-y-1 text-xs text-stone-600 font-medium">
                   {cust.phone && (
-                    <p className="flex items-center gap-1.5 text-stone-500">
-                      <Phone className="w-3.5 h-3.5 text-stone-400" />
-                      {cust.phone}
+                    <p className="flex items-center gap-1.5 text-stone-800 font-bold">
+                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                      {formatPhoneBR(cust.phone)}
                     </p>
                   )}
                   {cust.address && (

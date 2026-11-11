@@ -7,24 +7,22 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon,
   TrendingUp,
-  TrendingDown,
-  DollarSign,
   Receipt,
   Sparkles,
   ShoppingBag,
-  Share2
+  Flame,
+  UtensilsCrossed
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import {
   formatCurrency,
   getMonthLabel,
-  formatFriendlyDate,
   isSundayDate,
-  formatFullDate
 } from '../utils/dateUtils';
+import { formatPhoneBR } from '../utils/phoneUtils';
 
 export const ReportView: React.FC = () => {
-  const { sales, expenses } = useData();
+  const { sales, expenses, businessName, pixKey } = useData();
 
   const [copiedToast, setCopiedToast] = useState<boolean>(false);
 
@@ -81,16 +79,16 @@ export const ReportView: React.FC = () => {
 
   // Sundays breakdown
   const sundayGroups = useMemo(() => {
-    const map: Record<string, { date: string; total: number; count: number; sweets: string[] }> = {};
+    const map: Record<string, { date: string; total: number; count: number; items: string[] }> = {};
     sundaySales.forEach((s) => {
       if (!map[s.date]) {
-        map[s.date] = { date: s.date, total: 0, count: 0, sweets: [] };
+        map[s.date] = { date: s.date, total: 0, count: 0, items: [] };
       }
       map[s.date].total += s.totalAmount;
       map[s.date].count += 1;
       s.items.forEach((i) => {
-        if (!map[s.date].sweets.includes(i.name)) {
-          map[s.date].sweets.push(i.name);
+        if (!map[s.date].items.includes(i.name)) {
+          map[s.date].items.push(i.name);
         }
       });
     });
@@ -114,18 +112,21 @@ export const ReportView: React.FC = () => {
   // WhatsApp formatted text summary
   const generateWhatsAppSummary = () => {
     const monthName = getMonthLabel(selectedMonth);
-    let text = `📊 *FECHAMENTO MENSAL - CONFEITARIA*\n`;
+    let text = `📊 *FECHAMENTO MENSAL - ${businessName.toUpperCase() || 'ESPETO & BRASA'}*\n`;
     text += `🗓️ *Mês de Referência:* ${monthName}\n\n`;
     text += `💰 *FATURAMENTO BRUTO:* ${formatCurrency(totalRevenue)}\n`;
     text += `✅ *Total Recebido em Caixa:* ${formatCurrency(totalReceived)}\n`;
     text += `⏳ *Total a Receber / Fiado:* ${formatCurrency(totalPending)}\n`;
-    text += `🧾 *Despesas com Insumos:* ${formatCurrency(totalExpensesAmount)}\n`;
+    text += `🧾 *Despesas com Carnes, Carvão e Bebidas:* ${formatCurrency(totalExpensesAmount)}\n`;
     text += `--------------------------------\n`;
     text += `🏆 *LUCRO LÍQUIDO REALIZADO:* ${formatCurrency(netProfitRealized)}\n`;
     text += `📈 *Margem de Lucro:* ${profitMargin}%\n`;
-    text += `⭐ *Vendas de Domingo:* ${formatCurrency(sundayRevenue)} (${sundayShare}% do total)\n`;
+    text += `🔥 *Vendas de Domingo:* ${formatCurrency(sundayRevenue)} (${sundayShare}% do total)\n`;
     text += `📦 *Total de Pedidos:* ${monthSales.length} | *Ticket Médio:* ${formatCurrency(averageTicket)}\n\n`;
-    text += `_Relatório gerado automaticamente pelo DoceGestão_`;
+    if (pixKey) {
+      text += `💳 *Chave Pix:* ${pixKey}\n\n`;
+    }
+    text += `_Relatório gerado pelo Espeto & Brasa Gestão_`;
 
     navigator.clipboard.writeText(text);
     setCopiedToast(true);
@@ -135,7 +136,7 @@ export const ReportView: React.FC = () => {
   // Export CSV
   const handleExportCSV = () => {
     let csv = '\uFEFF'; // UTF-8 BOM
-    csv += `RELATÓRIO MENSAL DE VENDAS E DESPESAS - ${getMonthLabel(selectedMonth)}\n\n`;
+    csv += `RELATÓRIO MENSAL DE VENDAS E DESPESAS - ${businessName || 'Espeto & Brasa'} - ${getMonthLabel(selectedMonth)}\n\n`;
     csv += `RESUMO FINANCEIRO\n`;
     csv += `Faturamento Bruto;${formatCurrency(totalRevenue)}\n`;
     csv += `Recebido;${formatCurrency(totalReceived)}\n`;
@@ -148,7 +149,7 @@ export const ReportView: React.FC = () => {
     csv += `Data;Cliente;Telefone;Itens;Total;Valor Pago;Status;Forma\n`;
     monthSales.forEach((s) => {
       const itemsStr = s.items.map((i) => `${i.quantity}x ${i.name}`).join(' + ');
-      csv += `"${s.date}";"${s.customerName}";"${s.customerPhone || ''}";"${itemsStr}";"${s.totalAmount}";"${s.amountPaid}";"${s.paymentStatus}";"${s.paymentMethod}"\n`;
+      csv += `"${s.date}";"${s.customerName}";"${formatPhoneBR(s.customerPhone || '')}";"${itemsStr}";"${s.totalAmount}";"${s.amountPaid}";"${s.paymentStatus}";"${s.paymentMethod}"\n`;
     });
 
     csv += `\nDESPESAS DO MÊS\n`;
@@ -161,7 +162,7 @@ export const ReportView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `relatorio-confeitaria-${selectedMonth}.csv`;
+    link.download = `relatorio-espetobrasa-${selectedMonth}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -169,7 +170,7 @@ export const ReportView: React.FC = () => {
   return (
     <div className="space-y-6 pb-16">
       {/* Non-printable Control Header */}
-      <div className="print:hidden bg-white p-5 rounded-3xl border border-rose-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="print:hidden bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">📈</span>
@@ -178,7 +179,7 @@ export const ReportView: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-500 font-medium mt-0.5">
-            Gere o balanço completo de vendas, despesas e lucro para controle financeiro
+            Gere o balanço completo de vendas de espetinhos, bebidas, despesas e lucro líquido
           </p>
         </div>
 
@@ -187,7 +188,7 @@ export const ReportView: React.FC = () => {
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-xs sm:text-sm font-extrabold px-3 py-2 bg-rose-50 border border-rose-200 rounded-xl text-stone-800"
+            className="text-xs sm:text-sm font-extrabold px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
           >
             {availableMonths.map((m) => (
               <option key={m} value={m}>
@@ -222,7 +223,7 @@ export const ReportView: React.FC = () => {
           <button
             type="button"
             onClick={handlePrint}
-            className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black transition-all shadow-md shadow-rose-200 flex items-center gap-1.5"
+            className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-stone-950 font-black rounded-xl text-xs transition-all shadow-md shadow-orange-950/20 flex items-center gap-1.5"
           >
             <Printer className="w-4 h-4" />
             Imprimir / Salvar PDF
@@ -231,12 +232,12 @@ export const ReportView: React.FC = () => {
       </div>
 
       {/* PRINTABLE REPORT DOCUMENT CONTAINER */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-rose-100 shadow-md space-y-8 print:border-none print:shadow-none print:p-0">
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-md space-y-8 print:border-none print:shadow-none print:p-0">
         {/* Document Header */}
         <div className="border-b-2 border-stone-800 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-rose-600">
-              DoceGestão - Confeitaria Artesanal
+            <span className="text-xs font-black uppercase tracking-widest text-orange-600">
+              {businessName || 'Espeto & Brasa - Gestão de Vendas'}
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-stone-900 mt-1">
               Relatório Financeiro Mensal
@@ -248,7 +249,7 @@ export const ReportView: React.FC = () => {
 
           <div className="text-left sm:text-right text-xs text-stone-500 space-y-1">
             <p>Gerado em: {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-            <p className="font-semibold text-stone-700">Controle de Vendas de Doces & Despesas</p>
+            <p className="font-bold text-stone-700">Controle de Espetinhos, Salgados, Bebidas & Despesas</p>
           </div>
         </div>
 
@@ -278,12 +279,12 @@ export const ReportView: React.FC = () => {
             <span className="text-[10px] text-emerald-600 font-extrabold">{profitMargin}% margem de lucro</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-            <span className="text-[11px] font-bold text-amber-800 uppercase block">Vendas de Domingo</span>
-            <span className="text-xl font-black text-amber-900 mt-1 block">
+          <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200">
+            <span className="text-[11px] font-bold text-orange-900 uppercase block">Vendas de Domingo</span>
+            <span className="text-xl font-black text-orange-950 mt-1 block">
               {formatCurrency(sundayRevenue)}
             </span>
-            <span className="text-[10px] text-amber-700 font-bold">{sundayShare}% do faturamento</span>
+            <span className="text-[10px] text-orange-700 font-bold">{sundayShare}% do faturamento</span>
           </div>
         </div>
 
@@ -295,7 +296,7 @@ export const ReportView: React.FC = () => {
           </div>
           <div>
             <span className="text-stone-500 block">Total em Aberto / Fiado a Receber:</span>
-            <span className="text-base font-extrabold text-amber-700">{formatCurrency(totalPending)}</span>
+            <span className="text-base font-extrabold text-orange-700">{formatCurrency(totalPending)}</span>
           </div>
           <div>
             <span className="text-stone-500 block">Ticket Médio por Venda:</span>
@@ -306,8 +307,8 @@ export const ReportView: React.FC = () => {
         {/* Sunday Performance Table */}
         <div className="space-y-3">
           <h3 className="text-base font-black text-stone-900 flex items-center gap-1.5 border-b border-stone-200 pb-2">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            Desempenho dos Domingos no Mês
+            <Flame className="w-4 h-4 text-orange-600" />
+            Desempenho dos Domingos na Brasa
           </h3>
 
           {sundayGroups.length === 0 ? (
@@ -315,11 +316,11 @@ export const ReportView: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border border-stone-200 rounded-xl overflow-hidden">
-                <thead className="bg-amber-50 text-amber-950 font-bold border-b border-amber-200">
+                <thead className="bg-orange-50 text-orange-950 font-bold border-b border-orange-200">
                   <tr>
                     <th className="p-3">Data do Domingo</th>
                     <th className="p-3">Qtd. Pedidos</th>
-                    <th className="p-3">Doces Vendidos</th>
+                    <th className="p-3">Itens Mais Pedidos</th>
                     <th className="p-3 text-right">Faturamento Total</th>
                   </tr>
                 </thead>
@@ -330,8 +331,8 @@ export const ReportView: React.FC = () => {
                         Domingo, {sun.date.slice(8, 10)}/{sun.date.slice(5, 7)}
                       </td>
                       <td className="p-3 text-stone-700">{sun.count} pedidos</td>
-                      <td className="p-3 text-stone-600 truncate max-w-xs">{sun.sweets.slice(0, 3).join(', ')}</td>
-                      <td className="p-3 text-right font-black text-amber-900">{formatCurrency(sun.total)}</td>
+                      <td className="p-3 text-stone-600 truncate max-w-xs">{sun.items.slice(0, 3).join(', ')}</td>
+                      <td className="p-3 text-right font-black text-orange-950">{formatCurrency(sun.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -353,7 +354,7 @@ export const ReportView: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {expenseCategories.map(([cat, amount]) => (
                 <div key={cat} className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
-                  <span className="text-stone-500 capitalize block">{cat}</span>
+                  <span className="text-stone-500 capitalize block">{cat.replace('_', ' ')}</span>
                   <span className="text-sm font-black text-stone-900 mt-0.5 block">{formatCurrency(amount)}</span>
                   <span className="text-[10px] text-stone-400 font-semibold">
                     {totalExpensesAmount > 0 ? ((amount / totalExpensesAmount) * 100).toFixed(0) : 0}% dos custos
@@ -367,7 +368,7 @@ export const ReportView: React.FC = () => {
         {/* Full Sales Table of the Month */}
         <div className="space-y-3">
           <h3 className="text-base font-black text-stone-900 flex items-center gap-1.5 border-b border-stone-200 pb-2">
-            <ShoppingBag className="w-4 h-4 text-rose-500" />
+            <ShoppingBag className="w-4 h-4 text-orange-500" />
             Extrato Detalhado de Vendas ({monthSales.length} pedidos)
           </h3>
 
@@ -380,7 +381,7 @@ export const ReportView: React.FC = () => {
                   <tr>
                     <th className="p-2.5">Data</th>
                     <th className="p-2.5">Cliente</th>
-                    <th className="p-2.5">Doces do Pedido</th>
+                    <th className="p-2.5">Itens do Pedido</th>
                     <th className="p-2.5">Status Pgto.</th>
                     <th className="p-2.5">Forma</th>
                     <th className="p-2.5 text-right">Valor Total</th>
@@ -391,7 +392,7 @@ export const ReportView: React.FC = () => {
                   {monthSales.map((s) => (
                     <tr key={s.id} className="hover:bg-stone-50/50">
                       <td className="p-2.5 font-bold text-stone-800 whitespace-nowrap">
-                        {s.date.slice(8, 10)}/{s.date.slice(5, 7)} {isSundayDate(s.date) ? '⭐' : ''}
+                        {s.date.slice(8, 10)}/{s.date.slice(5, 7)} {isSundayDate(s.date) ? '🔥' : ''}
                       </td>
                       <td className="p-2.5 font-semibold text-stone-900 whitespace-nowrap">{s.customerName}</td>
                       <td className="p-2.5 text-stone-600 max-w-xs truncate">
@@ -423,9 +424,9 @@ export const ReportView: React.FC = () => {
 
         {/* Footer Signature Box for Print */}
         <div className="pt-8 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-between text-xs text-stone-500 gap-4">
-          <p>Relatório emitido para fins de fechamento e apuração de resultados da confeitaria.</p>
+          <p>Relatório emitido para fins de fechamento e apuração de resultados de vendas.</p>
           <div className="text-right">
-            <span className="font-bold text-stone-800">DoceGestão - Sistema Confeitaria</span>
+            <span className="font-bold text-stone-800">{businessName || 'Espeto & Brasa - Sistema de Gestão'}</span>
           </div>
         </div>
       </div>

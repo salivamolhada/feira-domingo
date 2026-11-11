@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Plus,
@@ -12,13 +12,20 @@ import {
   User,
   Phone,
   DollarSign,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  MessageCircle,
+  Search,
+  Check,
+  ChevronDown,
+  Percent,
+  Truck
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Sale, SaleItem, PaymentStatus, PaymentMethod, OrderStatus } from '../types';
 import { useData } from '../context/DataContext';
 import { CalendarPicker } from './CalendarPicker';
 import { formatCurrency, formatToDateInput, isSundayDate } from '../utils/dateUtils';
+import { formatPhoneBR, cleanPhoneDigits, getWhatsAppUrl, isValidBRPhone } from '../utils/phoneUtils';
 
 interface SaleModalProps {
   isOpen: boolean;
@@ -33,7 +40,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   saleToEdit,
   defaultDate
 }) => {
-  const { products, customers, saveSale, sales } = useData();
+  const { products, customers, saveSale, sales, businessName, pixKey } = useData();
 
   const [date, setDate] = useState<string>(
     saleToEdit?.date || defaultDate || formatToDateInput(new Date())
@@ -42,9 +49,19 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   const [customerPhone, setCustomerPhone] = useState<string>(saleToEdit?.customerPhone || '');
   const [customerId, setCustomerId] = useState<string | undefined>(saleToEdit?.customerId);
 
+  // Customer autocomplete dropdown state
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState<boolean>(false);
+  const customerDropdownRef = useRef<HTMLDivElement>(null);
+
   const [items, setItems] = useState<SaleItem[]>(
     saleToEdit?.items || []
   );
+
+  // Custom sweet item state
+  const [showCustomItemForm, setShowCustomItemForm] = useState<boolean>(false);
+  const [customItemName, setCustomItemName] = useState<string>('');
+  const [customItemPrice, setCustomItemPrice] = useState<string>('');
+  const [customItemQty, setCustomItemQty] = useState<number>(1);
 
   const [deliveryType, setDeliveryType] = useState<'retirada' | 'entrega'>(
     saleToEdit?.deliveryType || 'retirada'
@@ -70,12 +87,12 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  // Reset or initialize state
+  // Initialize or reset state when modal opens or edits
   useEffect(() => {
     if (saleToEdit) {
       setDate(saleToEdit.date);
       setCustomerName(saleToEdit.customerName);
-      setCustomerPhone(saleToEdit.customerPhone || '');
+      setCustomerPhone(formatPhoneBR(saleToEdit.customerPhone || ''));
       setCustomerId(saleToEdit.customerId);
       setItems(saleToEdit.items || []);
       setDeliveryType(saleToEdit.deliveryType || 'retirada');
@@ -103,7 +120,38 @@ export const SaleModal: React.FC<SaleModalProps> = ({
       setOrderStatus('entregue');
       setNotes('');
     }
+    setShowCustomerDropdown(false);
+    setShowCustomItemForm(false);
   }, [saleToEdit, defaultDate, isOpen]);
+
+  // Close customer dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter existing customers matching input
+  const matchingCustomers = React.useMemo(() => {
+    if (!customerName.trim()) return customers.slice(0, 5);
+    const term = customerName.toLowerCase().trim();
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(term) ||
+        (c.phone && c.phone.includes(term))
+    );
+  }, [customers, customerName]);
+
+  // Handle phone change with automatic formatting mask
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value;
+    const formatted = formatPhoneBR(rawValue);
+    setCustomerPhone(formatted);
+  };
 
   // Calculate items subtotal
   const itemsSubtotal = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
@@ -123,7 +171,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     }
   };
 
-  // When total amount changes and status is 'pago', update amountPaid
+  // Update amountPaid if total changes while 'pago' is active
   useEffect(() => {
     if (paymentStatus === 'pago') {
       setAmountPaid(totalAmount);
@@ -157,6 +205,33 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     setSelectedProductId('');
   };
 
+  // Add custom unlisted sweet item
+  const handleAddCustomItem = () => {
+    if (!customItemName.trim()) {
+      alert('Informe o nome do doce personalizado.');
+      return;
+    }
+    const priceNum = parseFloat(customItemPrice.replace(',', '.'));
+    if (isNaN(priceNum) || priceNum <= 0) {
+      alert('Informe um valor válido.');
+      return;
+    }
+
+    const newItem: SaleItem = {
+      id: `custom-item-${Date.now()}`,
+      name: customItemName.trim(),
+      quantity: Math.max(1, customItemQty),
+      unitPrice: priceNum,
+      totalPrice: Math.max(1, customItemQty) * priceNum,
+    };
+
+    setItems([...items, newItem]);
+    setCustomItemName('');
+    setCustomItemPrice('');
+    setCustomItemQty(1);
+    setShowCustomItemForm(false);
+  };
+
   const handleUpdateItemQty = (index: number, newQty: number) => {
     if (newQty <= 0) {
       handleRemoveItem(index);
@@ -168,25 +243,27 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     setItems(updated);
   };
 
-  const handleUpdateItemPrice = (index: number, newPrice: number) => {
-    const updated = [...items];
-    updated[index].unitPrice = newPrice;
-    updated[index].totalPrice = updated[index].quantity * newPrice;
-    setItems(updated);
-  };
-
   const handleRemoveItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
   };
 
-  // Quick select customer
-  const handleSelectCustomer = (cId: string) => {
-    const cust = customers.find((c) => c.id === cId);
-    if (cust) {
-      setCustomerId(cust.id);
-      setCustomerName(cust.name);
-      if (cust.phone) setCustomerPhone(cust.phone);
+  // Select customer from dropdown or recent tags
+  const handleSelectCustomer = (cust: typeof customers[0]) => {
+    setCustomerId(cust.id);
+    setCustomerName(cust.name);
+    setCustomerPhone(formatPhoneBR(cust.phone || ''));
+    if (cust.address && !notes.includes(cust.address)) {
+      setNotes((prev) => (prev ? `${prev} | Entrega: ${cust.address}` : `Entrega: ${cust.address}`));
     }
+    setShowCustomerDropdown(false);
+  };
+
+  // Test WhatsApp message to customer
+  const handleTestWhatsApp = () => {
+    if (!customerPhone) return;
+    const msg = `Olá ${customerName || 'querido(a) cliente'}! Tudo bem? Aqui é da ${businessName || 'confeitaria'} 🧁✨`;
+    const url = getWhatsAppUrl(customerPhone, msg);
+    if (url) window.open(url, '_blank');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -225,10 +302,10 @@ export const SaleModal: React.FC<SaleModalProps> = ({
 
       if (paymentStatus === 'pago') {
         confetti({
-          particleCount: 50,
-          spread: 60,
+          particleCount: 55,
+          spread: 65,
           origin: { y: 0.7 },
-          colors: ['#f43f5e', '#fbbf24', '#ec4899', '#a855f7'],
+          colors: ['#f43f5e', '#fbbf24', '#ec4899', '#10b981'],
         });
       }
 
@@ -245,22 +322,23 @@ export const SaleModal: React.FC<SaleModalProps> = ({
 
   const isSunday = isSundayDate(date);
   const remainingBalance = Math.max(0, totalAmount - amountPaid);
+  const isPhoneValid = isValidBRPhone(customerPhone);
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-rose-100 max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-stone-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-rose-100 max-w-2xl w-full max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/70 via-amber-50/50 to-pink-50/70">
+        <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/80 via-amber-50/60 to-pink-50/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-200">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-rose-200">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-stone-900">
+              <h2 className="text-lg font-black text-stone-900 tracking-tight">
                 {saleToEdit ? 'Editar Pedido / Venda' : 'Novo Lançamento de Venda'}
               </h2>
               <p className="text-xs text-stone-500 font-medium">
-                Controle os doces vendidos, data no calendário e status de pagamento
+                Controle datas no calendário, doces, pagamentos e WhatsApp do cliente
               </p>
             </div>
           </div>
@@ -275,13 +353,13 @@ export const SaleModal: React.FC<SaleModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5 flex-1">
-          {/* SECTION 1: CALENDAR DATE PICKER (KEY REQUIREMENT) */}
-          <div className="bg-gradient-to-br from-amber-50/60 to-rose-50/40 rounded-2xl p-4 border border-amber-200/80">
+          {/* SECTION 1: CALENDAR & DATE PICKER */}
+          <div className="bg-gradient-to-br from-amber-50/70 to-rose-50/50 rounded-2xl p-4 border border-amber-200/90 shadow-2xs">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 text-amber-600" />
-                <span className="font-bold text-sm text-stone-900">
-                  Data do Lançamento da Venda
+                <span className="font-extrabold text-sm text-stone-900">
+                  Data do Lançamento no Calendário
                 </span>
               </div>
               <button
@@ -297,16 +375,16 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-amber-200">
               <div className="flex items-center gap-2">
                 {isSunday ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-extrabold px-3 py-1 rounded-full bg-amber-500 text-white shadow-xs">
+                  <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-amber-500 text-white shadow-xs tracking-wide">
                     <Sparkles className="w-3.5 h-3.5" />
                     DOMINGO DE VENDAS
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-stone-100 text-stone-700">
+                  <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-stone-100 text-stone-700">
                     Dia útil / Semana
                   </span>
                 )}
-                <span className="text-sm font-bold text-stone-800">
+                <span className="text-sm font-black text-stone-800">
                   {date.slice(8, 10)}/{date.slice(5, 7)}/{date.slice(0, 4)}
                 </span>
               </div>
@@ -315,7 +393,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="text-xs font-semibold px-2 py-1 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="text-xs font-extrabold px-2.5 py-1 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
               />
             </div>
 
@@ -335,34 +413,102 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             )}
           </div>
 
-          {/* SECTION 2: CUSTOMER */}
+          {/* SECTION 2: CUSTOMER & TELEFONE / WHATSAPP (FIXED & ENHANCED) */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-4 h-4 text-rose-500" />
-              Cliente
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-extrabold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                <User className="w-4 h-4 text-rose-500" />
+                Cliente & Contato
+              </label>
+              {customerId && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  Cliente Vinculado
+                </span>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nome do cliente (ex: Mariana Silva)"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-sm font-medium px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all"
-                />
-                {/* Existing Customer Quick Select */}
+              {/* Customer Name with Autocomplete Dropdown */}
+              <div className="relative" ref={customerDropdownRef}>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nome do cliente (ex: Mariana Silva)"
+                    value={customerName}
+                    onFocus={() => setShowCustomerDropdown(true)}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      setShowCustomerDropdown(true);
+                      // If user clears, detach id
+                      if (!e.target.value.trim()) setCustomerId(undefined);
+                    }}
+                    className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all pr-8"
+                  />
+                  {customerName && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomerName('');
+                        setCustomerPhone('');
+                        setCustomerId(undefined);
+                      }}
+                      className="absolute right-2.5 top-2.5 text-stone-400 hover:text-stone-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Autocomplete suggestions */}
+                {showCustomerDropdown && matchingCustomers.length > 0 && (
+                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-rose-200 rounded-2xl shadow-xl max-h-48 overflow-y-auto p-1.5 space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-stone-400 px-2 py-1 block">
+                      Clientes Cadastrados:
+                    </span>
+                    {matchingCustomers.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectCustomer(c)}
+                        className="w-full text-left p-2 rounded-xl hover:bg-rose-50 flex items-center justify-between text-xs transition-colors group"
+                      >
+                        <div>
+                          <p className="font-bold text-stone-800 group-hover:text-rose-700">
+                            {c.name}
+                          </p>
+                          {c.phone && (
+                            <p className="text-[11px] text-stone-400 font-medium">
+                              {formatPhoneBR(c.phone)}
+                            </p>
+                          )}
+                        </div>
+                        {c.address && (
+                          <span className="text-[10px] text-stone-400 truncate max-w-[120px]">
+                            {c.address}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick tags for most recent customers */}
                 {customers.length > 0 && (
-                  <div className="mt-1.5 flex items-center gap-1 text-xs text-stone-500 overflow-x-auto py-1">
-                    <span className="shrink-0 text-[11px] font-semibold text-stone-400">
+                  <div className="mt-1.5 flex items-center gap-1 text-xs text-stone-500 overflow-x-auto py-0.5 no-scrollbar">
+                    <span className="shrink-0 text-[10px] font-bold text-stone-400">
                       Recentes:
                     </span>
                     {customers.slice(0, 4).map((c) => (
                       <button
                         key={c.id}
                         type="button"
-                        onClick={() => handleSelectCustomer(c.id)}
-                        className="shrink-0 px-2 py-0.5 rounded-md bg-stone-100 hover:bg-rose-50 hover:text-rose-700 text-stone-700 text-[11px] font-medium transition-colors"
+                        onClick={() => handleSelectCustomer(c)}
+                        className={`shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
+                          customerName === c.name
+                            ? 'bg-rose-500 text-white'
+                            : 'bg-stone-100 hover:bg-rose-50 hover:text-rose-700 text-stone-700'
+                        }`}
                       >
                         {c.name.split(' ')[0]}
                       </button>
@@ -371,17 +517,59 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 )}
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                  <Phone className="w-4 h-4" />
+              {/* TELEFONE COM MÁSCARA AUTOMÁTICA E VALIDAÇÃO WHATSAPP */}
+              <div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                    <Phone className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="(00) 00000-0000"
+                    value={customerPhone}
+                    onChange={handlePhoneChange}
+                    maxLength={15}
+                    className={`w-full text-sm font-bold pl-9 pr-24 py-2.5 bg-white border rounded-xl transition-all ${
+                      isPhoneValid
+                        ? 'border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-stone-900'
+                        : 'border-stone-200 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 text-stone-900'
+                    }`}
+                  />
+
+                  {/* Direct WhatsApp Action in Input */}
+                  {customerPhone && (
+                    <div className="absolute inset-y-0 right-1.5 flex items-center gap-1">
+                      {isPhoneValid && (
+                        <button
+                          type="button"
+                          onClick={handleTestWhatsApp}
+                          className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black flex items-center gap-1 shadow-xs transition-transform active:scale-95"
+                          title="Abrir conversa no WhatsApp"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          <span>WhatsApp</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <input
-                  type="text"
-                  placeholder="WhatsApp / Telefone (opcional)"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full text-sm font-medium pl-9 pr-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all"
-                />
+
+                <div className="flex items-center justify-between mt-1 px-1 text-[11px]">
+                  <span className="text-stone-400">
+                    {customerPhone.length > 0 && !isPhoneValid ? (
+                      <span className="text-amber-600 font-semibold">
+                        Digite DDD + 8 ou 9 dígitos
+                      </span>
+                    ) : isPhoneValid ? (
+                      <span className="text-emerald-700 font-bold flex items-center gap-0.5">
+                        <Check className="w-3 h-3" /> Número formatado para WhatsApp
+                      </span>
+                    ) : (
+                      'WhatsApp para envio de comprovante'
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -389,21 +577,74 @@ export const SaleModal: React.FC<SaleModalProps> = ({
           {/* SECTION 3: SWEET PRODUCTS / ITEMS */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-xs font-extrabold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 Doces do Pedido
               </label>
-              <span className="text-xs font-semibold text-stone-500">
-                Subtotal doces: {formatCurrency(itemsSubtotal)}
-              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCustomItemForm(!showCustomItemForm)}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 underline flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {showCustomItemForm ? 'Fechar Personalizado' : 'Doce fora do cardápio'}
+                </button>
+                <span className="text-xs font-bold text-stone-700 bg-rose-50 px-2.5 py-1 rounded-lg">
+                  Subtotal: {formatCurrency(itemsSubtotal)}
+                </span>
+              </div>
             </div>
 
-            {/* Add Sweet Dropdown */}
+            {/* Custom Item Form */}
+            {showCustomItemForm && (
+              <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-2xl space-y-2 animate-in fade-in duration-150">
+                <span className="text-xs font-extrabold text-rose-800 block">
+                  Adicionar Doce Personalizado / Especial
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nome do doce (ex: Bolo Vulcão Ninho 1kg)"
+                    value={customItemName}
+                    onChange={(e) => setCustomItemName(e.target.value)}
+                    className="sm:col-span-6 text-xs font-medium px-3 py-2 bg-white border border-rose-200 rounded-xl"
+                  />
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder="Valor R$"
+                    value={customItemPrice}
+                    onChange={(e) => setCustomItemPrice(e.target.value)}
+                    className="sm:col-span-3 text-xs font-bold px-3 py-2 bg-white border border-rose-200 rounded-xl"
+                  />
+                  <div className="sm:col-span-3 flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="1"
+                      value={customItemQty}
+                      onChange={(e) => setCustomItemQty(Number(e.target.value))}
+                      className="w-14 text-xs font-bold px-2 py-2 bg-white border border-rose-200 rounded-xl text-center"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomItem}
+                      className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black shadow-xs"
+                    >
+                      Adicionar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Add Sweet Dropdown from Catalog */}
             <div className="flex gap-2">
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 text-sm font-medium px-3.5 py-2 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                className="flex-1 text-xs sm:text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
               >
                 <option value="">Selecione um doce do cardápio...</option>
                 {products
@@ -418,7 +659,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 type="button"
                 onClick={handleAddProduct}
                 disabled={!selectedProductId}
-                className="px-4 py-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                className="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition-colors shadow-xs"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar
@@ -428,11 +669,11 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             {/* Items List */}
             {items.length === 0 ? (
               <div className="text-center py-6 px-4 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
-                <p className="text-sm font-medium text-stone-500">
+                <p className="text-xs sm:text-sm font-semibold text-stone-500">
                   Nenhum doce adicionado a este pedido ainda.
                 </p>
-                <p className="text-xs text-stone-400 mt-1">
-                  Selecione um doce acima para calcular o valor automaticamente.
+                <p className="text-[11px] text-stone-400 mt-1">
+                  Selecione um doce do cardápio acima para calcular o valor automaticamente.
                 </p>
               </div>
             ) : (
@@ -440,15 +681,17 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 {items.map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3 bg-white rounded-xl border border-stone-200 shadow-xs gap-3"
+                    className="flex items-center justify-between p-3 bg-white rounded-xl border border-stone-200 shadow-2xs gap-3"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-stone-800 truncate">{item.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-stone-500">
+                      <p className="text-xs sm:text-sm font-black text-stone-900 truncate">
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs">
+                        <span className="text-stone-400">
                           Unit: {formatCurrency(item.unitPrice)}
                         </span>
-                        <span className="text-xs font-bold text-rose-600">
+                        <span className="font-extrabold text-rose-600">
                           Total: {formatCurrency(item.totalPrice)}
                         </span>
                       </div>
@@ -460,17 +703,17 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleUpdateItemQty(index, item.quantity - 1)}
-                          className="px-2 py-1 text-xs font-bold text-stone-600 hover:bg-stone-200 rounded-l"
+                          className="px-2.5 py-1 text-xs font-bold text-stone-600 hover:bg-stone-200 rounded-l"
                         >
                           -
                         </button>
-                        <span className="px-2.5 text-xs font-bold text-stone-800">
+                        <span className="px-3 text-xs font-black text-stone-800">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
                           onClick={() => handleUpdateItemQty(index, item.quantity + 1)}
-                          className="px-2 py-1 text-xs font-bold text-stone-600 hover:bg-stone-200 rounded-r"
+                          className="px-2.5 py-1 text-xs font-bold text-stone-600 hover:bg-stone-200 rounded-r"
                         >
                           +
                         </button>
@@ -480,7 +723,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                         type="button"
                         onClick={() => handleRemoveItem(index)}
                         className="p-1.5 text-stone-400 hover:text-red-500 rounded-lg transition-colors"
-                        title="Remover item"
+                        title="Remover doce"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -500,10 +743,10 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <select
                 value={deliveryType}
                 onChange={(e) => setDeliveryType(e.target.value as 'retirada' | 'entrega')}
-                className="w-full text-xs font-semibold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
+                className="w-full text-xs font-bold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
               >
-                <option value="retirada">Retirada no Balcão</option>
-                <option value="entrega">Entrega a Domicílio</option>
+                <option value="retirada">🛍️ Retirada no Balcão</option>
+                <option value="entrega">🛵 Entrega a Domicílio</option>
               </select>
             </div>
 
@@ -517,7 +760,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 step="0.5"
                 value={deliveryFee}
                 onChange={(e) => setDeliveryFee(Number(e.target.value))}
-                className="w-full text-xs font-semibold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
+                className="w-full text-xs font-bold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
                 placeholder="0.00"
               />
             </div>
@@ -532,22 +775,22 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 step="0.5"
                 value={discount}
                 onChange={(e) => setDiscount(Number(e.target.value))}
-                className="w-full text-xs font-semibold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
+                className="w-full text-xs font-bold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
                 placeholder="0.00"
               />
             </div>
           </div>
 
-          {/* SECTION 5: PAYMENT STATUS & METHOD (KEY REQUIREMENT) */}
-          <div className="space-y-3 bg-gradient-to-br from-rose-50/50 to-amber-50/40 p-4 rounded-2xl border border-rose-200/70">
+          {/* SECTION 5: PAYMENT STATUS & METHOD */}
+          <div className="space-y-3 bg-gradient-to-br from-rose-50/60 to-amber-50/50 p-4 rounded-2xl border border-rose-200/80">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
+              <label className="text-xs font-black text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
                 <DollarSign className="w-4 h-4 text-emerald-600" />
                 Status do Pagamento
               </label>
               <div className="text-right">
                 <span className="text-xs text-stone-500 font-medium">Valor Total:</span>
-                <span className="text-base font-extrabold text-stone-900 ml-1.5">
+                <span className="text-base sm:text-lg font-black text-stone-900 ml-1.5">
                   {formatCurrency(totalAmount)}
                 </span>
               </div>
@@ -558,7 +801,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <button
                 type="button"
                 onClick={() => handlePaymentStatusChange('pago')}
-                className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
                   paymentStatus === 'pago'
                     ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-300'
                     : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
@@ -571,7 +814,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <button
                 type="button"
                 onClick={() => handlePaymentStatusChange('pendente')}
-                className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
                   paymentStatus === 'pendente'
                     ? 'bg-amber-500 text-white border-amber-600 shadow-md ring-2 ring-amber-300'
                     : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
@@ -584,7 +827,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <button
                 type="button"
                 onClick={() => handlePaymentStatusChange('parcial')}
-                className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
                   paymentStatus === 'parcial'
                     ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-300'
                     : 'bg-white text-blue-800 border-blue-200 hover:bg-blue-50'
@@ -597,7 +840,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <button
                 type="button"
                 onClick={() => handlePaymentStatusChange('fiado')}
-                className={`p-2.5 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1 transition-all ${
+                className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
                   paymentStatus === 'fiado'
                     ? 'bg-purple-600 text-white border-purple-700 shadow-md ring-2 ring-purple-300'
                     : 'bg-white text-purple-800 border-purple-200 hover:bg-purple-50'
@@ -611,13 +854,13 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             {/* Payment method and amount inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">
+                <label className="text-xs font-bold text-stone-700 block mb-1">
                   Forma de Pagamento
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                  className="w-full text-xs font-semibold px-3 py-2 bg-white border border-stone-200 rounded-xl"
+                  className="w-full text-xs font-bold px-3 py-2 bg-white border border-stone-200 rounded-xl"
                 >
                   <option value="pix">Pix (Chave / QR Code)</option>
                   <option value="dinheiro">Dinheiro Físico</option>
@@ -628,7 +871,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 block mb-1">
+                <label className="text-xs font-bold text-stone-700 block mb-1">
                   Valor Pago (R$)
                 </label>
                 <input
@@ -646,14 +889,14 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                       setPaymentStatus('parcial');
                     }
                   }}
-                  className="w-full text-xs font-bold px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900"
+                  className="w-full text-xs font-black px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900"
                 />
               </div>
             </div>
 
             {/* Remaining amount banner if pending or partial */}
             {remainingBalance > 0 && (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-100/80 border border-amber-300 text-amber-950 text-xs font-bold">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-100/90 border border-amber-300 text-amber-950 text-xs font-bold">
                 <span>Saldo Restante a Receber:</span>
                 <span className="text-sm font-black text-rose-700">
                   {formatCurrency(remainingBalance)}
@@ -664,7 +907,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
 
           {/* SECTION 6: NOTES */}
           <div>
-            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-extrabold text-stone-700 uppercase tracking-wider block mb-1.5">
               Observações (opcional)
             </label>
             <textarea
@@ -688,7 +931,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white rounded-xl text-xs font-extrabold shadow-md shadow-rose-200 hover:shadow-lg transition-all flex items-center gap-1.5"
+              className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md shadow-rose-200 hover:shadow-lg transition-all flex items-center gap-1.5"
             >
               {isSubmitting ? (
                 'Salvando...'

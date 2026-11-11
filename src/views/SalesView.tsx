@@ -13,12 +13,13 @@ import {
   Edit,
   Trash2,
   Calendar as CalendarIcon,
-  ChevronDown
+  Flame
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useData } from '../context/DataContext';
 import { Sale, PaymentStatus } from '../types';
 import { formatCurrency, formatFriendlyDate, isSundayDate } from '../utils/dateUtils';
+import { formatPhoneBR, getWhatsAppUrl, isValidBRPhone } from '../utils/phoneUtils';
 
 interface SalesViewProps {
   onOpenSaleModal: () => void;
@@ -26,7 +27,7 @@ interface SalesViewProps {
 }
 
 export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSale }) => {
-  const { sales, deleteSale, updatePaymentStatus } = useData();
+  const { sales, deleteSale, updatePaymentStatus, businessName, pixKey } = useData();
 
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('todos');
@@ -83,10 +84,10 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
     try {
       await updatePaymentStatus(sale.id, 'pago', sale.totalAmount);
       confetti({
-        particleCount: 40,
-        spread: 50,
+        particleCount: 45,
+        spread: 60,
         origin: { y: 0.6 },
-        colors: ['#10b981', '#fbbf24', '#f43f5e'],
+        colors: ['#ea580c', '#f59e0b', '#10b981'],
       });
     } catch (err) {
       console.error('Error marking as paid:', err);
@@ -104,47 +105,59 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
       alert('Este pedido não possui telefone cadastrado.');
       return;
     }
-    const cleanPhone = sale.customerPhone.replace(/\D/g, '');
-    const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
 
-    const itemsSummary = sale.items.map((i) => `${i.quantity}x ${i.name}`).join(', ');
-    let msg = `Olá ${sale.customerName}! Tudo bem? Passando para confirmar seu pedido na confeitaria 🍰\n\n`;
-    msg += `🧁 *Itens:* ${itemsSummary}\n`;
+    const itemsSummary = sale.items.map((i) => `• ${i.quantity}x ${i.name} (${formatCurrency(i.totalPrice)})`).join('\n');
+    let msg = `Olá *${sale.customerName}*! Tudo bem? Aqui é do *${businessName || 'Espeto & Brasa'}* 🍢🔥\n\n`;
+    msg += `Passando para confirmar os detalhes do seu pedido:\n\n`;
+    msg += `🥩 *Itens Selecionados:*\n${itemsSummary}\n\n`;
     msg += `📅 *Data:* ${formatFriendlyDate(sale.date)}\n`;
+    if (sale.deliveryTime) {
+      msg += `⏰ *Horário:* ${sale.deliveryTime}\n`;
+    }
+    msg += `🚚 *Modalidade:* ${sale.deliveryType === 'entrega' ? 'Entrega a Domicílio' : 'Retirada no Balcão'}\n`;
+    if (sale.deliveryFee && sale.deliveryFee > 0) {
+      msg += `🛵 *Taxa de Entrega:* ${formatCurrency(sale.deliveryFee)}\n`;
+    }
     msg += `💰 *Valor Total:* ${formatCurrency(sale.totalAmount)}\n`;
 
     if (sale.paymentStatus === 'pago') {
-      msg += `✅ *Pagamento:* Concluído (${sale.paymentMethod.toUpperCase()}). Muito obrigada pela preferência!`;
+      msg += `\n✅ *Status do Pagamento:* Quitado com sucesso (${sale.paymentMethod.toUpperCase()}). Muito obrigado(a) pela preferência e bom apetite! 🔥🥩`;
     } else {
       const pendingVal = Math.max(0, sale.totalAmount - sale.amountPaid);
+      if (sale.paymentStatus === 'parcial') {
+        msg += `💵 *Valor já pago:* ${formatCurrency(sale.amountPaid)}\n`;
+      }
       msg += `⏳ *Saldo a Pagar:* ${formatCurrency(pendingVal)}\n`;
-      msg += `Por favor, nos envie o comprovante Pix para separarmos seus doces. Gratidão! ❤️`;
+      if (pixKey) {
+        msg += `\n💳 *Chave Pix para pagamento:* ${pixKey}\n`;
+      }
+      msg += `\nPor favor, envie o comprovante Pix por aqui para separarmos seu pedido quentinho e as bebidas bem geladas! Agradecemos a preferência! 🙌`;
     }
 
-    const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const url = getWhatsAppUrl(sale.customerPhone, msg);
+    if (url) window.open(url, '_blank');
   };
 
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-rose-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🛍️</span>
             <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
-              Controle de Pedidos e Vendas
+              Controle de Pedidos & Vendas
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-500 font-medium mt-0.5">
-            Gerencie cada venda de domingo, clientes, valores recebidos e pendências
+            Gerencie cada venda de domingo, espetos, salgados, refrigerantes, clientes e pendências
           </p>
         </div>
 
         <button
           type="button"
           onClick={onOpenSaleModal}
-          className="px-5 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white rounded-2xl text-xs font-black shadow-md shadow-rose-200 hover:shadow-lg transition-all flex items-center gap-1.5 self-start sm:self-auto"
+          className="px-5 py-2.5 bg-gradient-to-r from-orange-600 via-amber-500 to-red-500 hover:from-orange-700 hover:to-red-600 text-stone-950 font-black rounded-2xl text-xs shadow-md shadow-orange-950/20 hover:text-white transition-all flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Novo Lançamento
@@ -152,7 +165,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-rose-100 shadow-sm space-y-3">
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200/80 shadow-xs space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           {/* Search Input */}
           <div className="sm:col-span-5 relative">
@@ -161,10 +174,10 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
             </span>
             <input
               type="text"
-              placeholder="Buscar por cliente, doce ou telefone..."
+              placeholder="Buscar por cliente, espeto, salgado, bebida..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs font-medium pl-9 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              className="w-full text-xs font-semibold pl-9 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             />
           </div>
 
@@ -173,7 +186,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="w-full text-xs font-bold px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-800"
+              className="w-full text-xs font-bold px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-800 focus:border-orange-500"
             >
               <option value="todos">Todos os Status</option>
               <option value="pago">🟢 Somente Pagos</option>
@@ -188,7 +201,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
             <select
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="w-full text-xs font-bold px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-800"
+              className="w-full text-xs font-bold px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-stone-800 focus:border-orange-500"
             >
               <option value="todos">Todos os Meses</option>
               {availableMonths.map((m) => (
@@ -204,13 +217,13 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
             <button
               type="button"
               onClick={() => setFilterSundayOnly(!filterSundayOnly)}
-              className={`w-full py-2.5 px-3 rounded-xl text-xs font-extrabold border transition-all flex items-center justify-center gap-1.5 ${
+              className={`w-full py-2.5 px-3 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 ${
                 filterSundayOnly
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
+                  ? 'bg-orange-600 text-white border-orange-700 shadow-xs'
                   : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <Flame className={`w-3.5 h-3.5 ${filterSundayOnly ? 'text-amber-300' : 'text-orange-500'}`} />
               ⭐ Domingos
             </button>
           </div>
@@ -221,7 +234,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
           <div className="flex items-center gap-2 text-stone-500 font-semibold">
             <span>{filteredSales.length} pedidos encontrados</span>
             {filterSundayOnly && (
-              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">
+              <span className="px-2 py-0.5 rounded-full bg-orange-100 text-orange-950 font-bold text-[10px]">
                 Filtrado por Domingos
               </span>
             )}
@@ -235,7 +248,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
               </span>
             </div>
             {totalFilteredPending > 0 && (
-              <div className="text-right font-black text-rose-600">
+              <div className="text-right font-black text-orange-600">
                 <span className="text-stone-400 mr-1.5 font-normal">Pendente:</span>
                 {formatCurrency(totalFilteredPending)}
               </div>
@@ -246,8 +259,8 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
 
       {/* Sales List */}
       {filteredSales.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-rose-100 shadow-sm space-y-3">
-          <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto">
+        <div className="bg-white rounded-3xl p-12 text-center border border-stone-200/80 shadow-xs space-y-3">
+          <div className="w-16 h-16 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center mx-auto">
             <ShoppingBag className="w-8 h-8" />
           </div>
           <h3 className="text-base font-extrabold text-stone-900">Nenhum pedido encontrado</h3>
@@ -258,7 +271,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
           <button
             type="button"
             onClick={onOpenSaleModal}
-            className="mt-2 px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-rose-200 inline-flex items-center gap-1.5"
+            className="mt-2 px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white rounded-2xl text-xs font-bold shadow-md shadow-orange-950/20 inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
             Lançar Primeira Venda
@@ -273,7 +286,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
             return (
               <div
                 key={sale.id}
-                className="bg-white rounded-3xl p-5 border border-rose-100 hover:border-rose-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                className="bg-white rounded-3xl p-5 border border-stone-200/90 hover:border-orange-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
               >
                 {/* Top Info: Date, Customer, Sunday Badge */}
                 <div>
@@ -284,8 +297,8 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
                         {formatFriendlyDate(sale.date)}
                       </span>
                       {isSunday && (
-                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-0.5">
-                          <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-950 border border-orange-300 flex items-center gap-0.5">
+                          <Flame className="w-2.5 h-2.5 text-orange-600" />
                           DOMINGO
                         </span>
                       )}
@@ -315,15 +328,25 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
 
                   {/* Customer name and phone */}
                   <div className="mt-2.5">
-                    <h3 className="text-base font-extrabold text-stone-900">
+                    <h3 className="text-base font-black text-stone-900 tracking-tight">
                       {sale.customerName}
                     </h3>
-                    {sale.customerPhone && (
-                      <p className="text-xs text-stone-400 font-medium">{sale.customerPhone}</p>
+                    {sale.customerPhone ? (
+                      <button
+                        type="button"
+                        onClick={() => openWhatsApp(sale)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-0.5 rounded-lg border border-emerald-200 mt-1 transition-all"
+                        title="Enviar mensagem ou comprovante no WhatsApp"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{formatPhoneBR(sale.customerPhone)}</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-stone-400 font-medium block mt-0.5">Sem telefone informado</span>
                     )}
                   </div>
 
-                  {/* Sweet Items List */}
+                  {/* Items List */}
                   <div className="mt-3 p-3 rounded-2xl bg-stone-50 border border-stone-100 space-y-1">
                     {sale.items.map((item) => (
                       <div
@@ -363,7 +386,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ onOpenSaleModal, onEditSal
                         Forma: {sale.paymentMethod.toUpperCase()}
                       </span>
                       {remaining > 0 && (
-                        <span className="text-xs font-bold text-rose-600">
+                        <span className="text-xs font-bold text-orange-600">
                           Falta: {formatCurrency(remaining)}
                         </span>
                       )}

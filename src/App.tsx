@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { DataProvider, useData } from './context/DataContext';
+import { DataProvider } from './context/DataContext';
 import { Navbar } from './components/Navbar';
 import { SaleModal } from './components/SaleModal';
 import { ExpenseModal } from './components/ExpenseModal';
 import { ProductModal } from './components/ProductModal';
 import { CustomerModal } from './components/CustomerModal';
+import { SettingsModal } from './components/SettingsModal';
 
 import { DashboardView } from './views/DashboardView';
 import { CalendarView } from './views/CalendarView';
@@ -15,7 +16,7 @@ import { CustomersView } from './views/CustomersView';
 import { ReportView } from './views/ReportView';
 
 import { Sale, Expense, Product, Customer } from './types';
-import { Plus, ShoppingBag, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -33,6 +34,8 @@ function AppContent() {
 
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState<boolean>(false);
   const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   // Handlers
   const handleOpenNewSale = (date?: string) => {
@@ -78,13 +81,14 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#faf7f4] text-stone-900 font-sans flex flex-col selection:bg-rose-200">
+    <div className="min-h-screen bg-[#fcfbfa] text-stone-900 font-sans flex flex-col selection:bg-orange-500 selection:text-white">
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenSaleModal={() => handleOpenNewSale()}
         onOpenExpenseModal={handleOpenNewExpense}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main Container */}
@@ -140,7 +144,7 @@ function AppContent() {
         <button
           type="button"
           onClick={() => handleOpenNewSale()}
-          className="w-14 h-14 rounded-full bg-gradient-to-tr from-rose-500 to-amber-500 text-white shadow-xl shadow-rose-300 flex items-center justify-center active:scale-95 transition-transform"
+          className="w-14 h-14 rounded-full bg-gradient-to-tr from-orange-600 via-amber-500 to-red-500 text-stone-950 shadow-xl shadow-orange-950/40 flex items-center justify-center active:scale-95 transition-transform"
           title="Novo Lançamento de Venda"
         >
           <Plus className="w-7 h-7" />
@@ -171,6 +175,11 @@ function AppContent() {
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         customerToEdit={customerToEdit}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

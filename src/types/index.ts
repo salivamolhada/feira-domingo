@@ -62,7 +62,7 @@ export interface Expense {
   id: string;
   userId: string;
   description: string;
-  category: 'ingredientes' | 'embalagens' | 'entrega' | 'gas_energia' | 'equipamentos' | 'marketing' | 'outros';
+  category: 'carnes_insumos' | 'bebidas_estoque' | 'carvao_gas' | 'embalagens' | 'entrega' | 'equipamentos' | 'marketing' | 'outros' | 'ingredientes' | 'gas_energia';
   amount: number;
   date: string; // YYYY-MM-DD
   paymentMethod: PaymentMethod;

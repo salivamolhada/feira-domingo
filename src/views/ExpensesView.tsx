@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Receipt, Plus, Search, Trash2, Edit, Calendar as CalendarIcon, Tag } from 'lucide-react';
+import { Receipt, Plus, Search, Trash2, Edit, Calendar as CalendarIcon, Tag, Flame } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { Expense } from '../types';
 import { formatCurrency, formatFriendlyDate, getMonthLabel } from '../utils/dateUtils';
@@ -63,32 +63,36 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
 
   const getCategoryBadge = (cat: Expense['category']) => {
     switch (cat) {
-      case 'ingredientes':
-        return <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full text-[10px] font-bold">🍫 Ingredientes</span>;
+      case 'carnes_insumos':
+        return <span className="bg-red-100 text-red-950 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-200">🥩 Carnes & Insumos</span>;
+      case 'bebidas_estoque':
+        return <span className="bg-sky-100 text-sky-950 px-2 py-0.5 rounded-full text-[10px] font-bold border border-sky-200">🥤 Bebidas & Energéticos</span>;
+      case 'carvao_gas':
+        return <span className="bg-orange-100 text-orange-950 px-2 py-0.5 rounded-full text-[10px] font-bold border border-orange-200">🔥 Carvão & Gás</span>;
       case 'embalagens':
-        return <span className="bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full text-[10px] font-bold">📦 Embalagens</span>;
+        return <span className="bg-amber-100 text-amber-950 px-2 py-0.5 rounded-full text-[10px] font-bold border border-amber-200">📦 Espetos & Embalagens</span>;
       case 'entrega':
-        return <span className="bg-purple-100 text-purple-900 px-2 py-0.5 rounded-full text-[10px] font-bold">🛵 Entrega</span>;
-      case 'gas_energia':
-        return <span className="bg-yellow-100 text-yellow-900 px-2 py-0.5 rounded-full text-[10px] font-bold">⚡ Gás/Luz</span>;
+        return <span className="bg-purple-100 text-purple-950 px-2 py-0.5 rounded-full text-[10px] font-bold border border-purple-200">🛵 Entrega / Gelo</span>;
+      case 'equipamentos':
+        return <span className="bg-stone-200 text-stone-900 px-2 py-0.5 rounded-full text-[10px] font-bold border border-stone-300">🔪 Grelhas & Utensílios</span>;
       default:
-        return <span className="bg-stone-100 text-stone-800 px-2 py-0.5 rounded-full text-[10px] font-bold">🧾 Outros</span>;
+        return <span className="bg-stone-100 text-stone-800 px-2 py-0.5 rounded-full text-[10px] font-bold">🧾 Outros Custos</span>;
     }
   };
 
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-rose-100 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-2xl">💸</span>
             <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
-              Despesas e Insumos da Confeitaria
+              Despesas & Compras de Insumos
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-stone-500 font-medium mt-0.5">
-            Acompanhe compras de leite condensado, chocolate, embalagens e custos operacionais
+            Acompanhe compras de carnes, carvão vegetal, fardos de energéticos, refrigerantes e embalagens
           </p>
         </div>
 
@@ -103,7 +107,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
       </div>
 
       {/* Filter and Category Cards */}
-      <div className="bg-white rounded-3xl p-5 border border-rose-100 shadow-sm space-y-4">
+      <div className="bg-white rounded-3xl p-5 border border-stone-200/80 shadow-xs space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           <div className="sm:col-span-6 relative">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-stone-400">
@@ -111,10 +115,10 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
             </span>
             <input
               type="text"
-              placeholder="Buscar despesa ou fornecedor..."
+              placeholder="Buscar por corte de carne, fornecedor, carvão..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full text-xs font-medium pl-9 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl"
+              className="w-full text-xs font-semibold pl-9 pr-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:border-red-500"
             />
           </div>
 
@@ -125,12 +129,13 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
               className="w-full text-xs font-bold px-3 py-2.5 bg-stone-50 border border-stone-200 rounded-xl"
             >
               <option value="todas">Todas Categorias</option>
-              <option value="ingredientes">🍫 Ingredientes</option>
-              <option value="embalagens">📦 Embalagens</option>
-              <option value="entrega">🛵 Entrega / Frete</option>
-              <option value="gas_energia">⚡ Gás & Energia</option>
-              <option value="equipamentos">🥣 Utensílios</option>
-              <option value="outros">🧾 Outros</option>
+              <option value="carnes_insumos">🥩 Carnes & Insumos</option>
+              <option value="bebidas_estoque">🥤 Bebidas & Estoque</option>
+              <option value="carvao_gas">🔥 Carvão & Gás</option>
+              <option value="embalagens">📦 Espetos & Embalagens</option>
+              <option value="entrega">🛵 Entrega / Gelo</option>
+              <option value="equipamentos">🔪 Grelhas & Utensílios</option>
+              <option value="outros">🧾 Outros Custos</option>
             </select>
           </div>
 
@@ -158,7 +163,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
                 key={cat}
                 className="px-2.5 py-1 rounded-xl bg-stone-100 text-stone-800 text-[11px] font-semibold"
               >
-                {cat}: <strong className="text-stone-900">{formatCurrency(amount)}</strong>
+                {cat.replace('_', ' ')}: <strong className="text-stone-900">{formatCurrency(amount)}</strong>
               </span>
             ))}
           </div>
@@ -174,12 +179,11 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
 
       {/* Expenses List */}
       {filteredExpenses.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-rose-100 shadow-sm space-y-3">
+        <div className="bg-white rounded-3xl p-12 text-center border border-stone-200/80 shadow-xs space-y-3">
           <Receipt className="w-12 h-12 text-stone-300 mx-auto" />
-          <h3 className="text-base font-extrabold text-stone-900">Nenhuma despesa encontrada</h3>
+          <h3 className="text-base font-extrabold text-stone-900">Nenhuma compra ou despesa encontrada</h3>
           <p className="text-xs text-stone-500 max-w-sm mx-auto">
-            Lance os custos dos seus ingredientes para que o sistema consiga calcular com precisão o
-            seu lucro líquido no final do mês.
+            Lance os custos de carnes, carvão vegetal e bebidas para que o sistema consiga calcular com precisão o lucro líquido das vendas.
           </p>
           <button
             type="button"
@@ -195,7 +199,7 @@ export const ExpensesView: React.FC<ExpensesViewProps> = ({
           {filteredExpenses.map((expense) => (
             <div
               key={expense.id}
-              className="bg-white rounded-3xl p-5 border border-stone-200 hover:border-red-300 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+              className="bg-white rounded-3xl p-5 border border-stone-200 hover:border-red-300 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-3"
             >
               <div>
                 <div className="flex items-center justify-between">

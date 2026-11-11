@@ -3,6 +3,7 @@ import { X, User, Phone, MapPin, FileText, CheckCircle2, MessageCircle, DollarSi
 import { Customer } from '../types';
 import { useData } from '../context/DataContext';
 import { formatCurrency, formatFriendlyDate } from '../utils/dateUtils';
+import { formatPhoneBR, getWhatsAppUrl, isValidBRPhone } from '../utils/phoneUtils';
 
 interface CustomerModalProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   onClose,
   customerToEdit,
 }) => {
-  const { saveCustomer, sales } = useData();
+  const { saveCustomer, sales, pixKey, businessName } = useData();
 
   const [name, setName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
@@ -26,7 +27,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   useEffect(() => {
     if (customerToEdit) {
       setName(customerToEdit.name);
-      setPhone(customerToEdit.phone || '');
+      setPhone(formatPhoneBR(customerToEdit.phone || ''));
       setAddress(customerToEdit.address || '');
       setNotes(customerToEdit.notes || '');
     } else {
@@ -82,18 +83,20 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
   const openWhatsApp = () => {
     if (!phone) return;
-    const cleanPhone = phone.replace(/\D/g, '');
-    const phoneWithCountry = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-    let msg = `Olá ${name}! Tudo bem? Aqui é da confeitaria artesanal 🍰✨`;
+    let msg = `Olá ${name}! Tudo bem? Aqui é da ${businessName || 'confeitaria artesanal'} 🍰✨`;
     if (totalPending > 0) {
-      msg += ` Passando com carinho para lembrar sobre o saldo pendente de ${formatCurrency(
+      msg += `\n\nPassando com carinho para lembrar sobre o saldo pendente de *${formatCurrency(
         totalPending
-      )}. Podemos enviar a chave Pix para acertar? Muito obrigada!`;
+      )}*.`;
+      if (pixKey) {
+        msg += `\n💳 *Chave Pix para acerto:* ${pixKey}`;
+      }
+      msg += `\nMuito obrigada pela preferência! ❤️`;
     } else {
-      msg += ` Como estão os doces? Já estamos organizando a produção do próximo domingo e adoraríamos preparar sua sobremesa favorita!`;
+      msg += `\nComo estão os doces? Já estamos organizando a produção do próximo domingo e adoraríamos preparar sua sobremesa favorita!`;
     }
-    const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
+    const url = getWhatsAppUrl(phone, msg);
+    if (url) window.open(url, '_blank');
   };
 
   if (!isOpen) return null;
@@ -177,16 +180,17 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                   <Phone className="w-4 h-4" />
                 </span>
                 <input
-                  type="text"
+                  type="tel"
                   placeholder="(11) 98765-4321"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full text-xs font-semibold pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl"
+                  maxLength={15}
+                  onChange={(e) => setPhone(formatPhoneBR(e.target.value))}
+                  className="w-full text-xs font-bold pl-9 pr-3 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900"
                 />
               </div>
             </div>
 
-            {phone && (
+            {isValidBRPhone(phone) && (
               <div className="flex items-end">
                 <button
                   type="button"

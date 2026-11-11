@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, CakeSlice, Sparkles, CheckCircle2, TrendingUp } from 'lucide-react';
+import { X, UtensilsCrossed, Sparkles, CheckCircle2, TrendingUp, Flame, Zap } from 'lucide-react';
 import { Product } from '../types';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils/dateUtils';
@@ -18,10 +18,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const { saveProduct } = useData();
 
   const [name, setName] = useState<string>('');
-  const [category, setCategory] = useState<string>('Brigadeiros');
+  const [category, setCategory] = useState<string>('Espetinhos');
   const [price, setPrice] = useState<number | ''>('');
   const [costPrice, setCostPrice] = useState<number | ''>('');
-  const [unit, setUnit] = useState<string>('unidade');
+  const [unit, setUnit] = useState<string>('espeto');
   const [description, setDescription] = useState<string>('');
   const [active, setActive] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -32,15 +32,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setCategory(productToEdit.category);
       setPrice(productToEdit.price);
       setCostPrice(productToEdit.costPrice || 0);
-      setUnit(productToEdit.unit || 'unidade');
+      setUnit(productToEdit.unit || 'espeto');
       setDescription(productToEdit.description || '');
       setActive(productToEdit.active !== undefined ? productToEdit.active : true);
     } else {
       setName('');
-      setCategory('Brigadeiros');
+      setCategory('Espetinhos');
       setPrice('');
       setCostPrice('');
-      setUnit('unidade');
+      setUnit('espeto');
       setDescription('');
       setActive(true);
     }
@@ -54,7 +54,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('Informe o nome do doce.');
+      alert('Informe o nome do item (ex: Espetinho de Alcatra, Monster, Coxinha).');
       return;
     }
     if (!price || Number(price) <= 0) {
@@ -88,20 +88,20 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-rose-100 max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-pink-50/70 to-rose-50/70">
+        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between bg-gradient-to-r from-orange-50 via-amber-50 to-stone-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-200">
-              <CakeSlice className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-600 to-amber-500 text-white flex items-center justify-center shadow-md shadow-orange-200">
+              <UtensilsCrossed className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-extrabold text-stone-900">
-                {productToEdit ? 'Editar Doce / Produto' : 'Cadastrar Doce no Cardápio'}
+                {productToEdit ? 'Editar Item do Cardápio' : 'Cadastrar Item no Cardápio'}
               </h2>
               <p className="text-xs text-stone-500 font-medium">
-                Defina o preço de venda e custo de ingredientes para calcular seu lucro
+                Espetinhos na brasa, salgados fritos/assados, energéticos e bebidas geladas
               </p>
             </div>
           </div>
@@ -118,15 +118,15 @@ export const ProductModal: React.FC<ProductModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
             <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1">
-              Nome do Doce
+              Nome do Item
             </label>
             <input
               type="text"
               required
-              placeholder="Ex: Copo da Felicidade Brownie & Ninho"
+              placeholder="Ex: Espetinho de Carne Alcatra c/ Farofa"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm font-medium px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             />
           </div>
 
@@ -137,16 +137,23 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl"
+                onChange={(e) => {
+                  const newCat = e.target.value;
+                  setCategory(newCat);
+                  if (newCat === 'Espetinhos') setUnit('espeto');
+                  else if (newCat === 'Energéticos' || newCat === 'Refrigerantes') setUnit('lata');
+                  else if (newCat === 'Cervejas & Bebidas') setUnit('long neck');
+                  else if (newCat === 'Salgados') setUnit('unidade');
+                }}
+                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500"
               >
-                <option value="Brigadeiros">Brigadeiros & Trufas</option>
-                <option value="Bolos no Pote">Bolos no Pote</option>
-                <option value="Cones Trufados">Cones Trufados</option>
-                <option value="Copos Gourmet">Copos da Felicidade</option>
-                <option value="Tortas">Tortas & Fatias</option>
-                <option value="Doces Tradicionais">Doces Tradicionais</option>
-                <option value="Outros">Outros Doces</option>
+                <option value="Espetinhos">🥩 Espetinhos</option>
+                <option value="Salgados">🥟 Salgados</option>
+                <option value="Energéticos">⚡ Energéticos</option>
+                <option value="Refrigerantes">🥤 Refrigerantes</option>
+                <option value="Cervejas & Bebidas">🍺 Cervejas & Bebidas</option>
+                <option value="Sobremesas">🍰 Sobremesas</option>
+                <option value="Outros">📦 Outros</option>
               </select>
             </div>
 
@@ -157,20 +164,22 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl"
+                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500"
               >
+                <option value="espeto">espeto</option>
                 <option value="unidade">unidade</option>
-                <option value="pote 250ml">pote 250ml</option>
-                <option value="copo 350ml">copo 350ml</option>
-                <option value="fatia">fatia</option>
-                <option value="caixa">caixa</option>
-                <option value="cento">cento (100 un)</option>
+                <option value="lata 473ml">lata 473ml</option>
+                <option value="lata 350ml">lata 350ml</option>
+                <option value="garrafa 2L">garrafa 2L</option>
+                <option value="long neck">long neck</option>
+                <option value="porção">porção</option>
+                <option value="cento">cento</option>
               </select>
             </div>
           </div>
 
           {/* Pricing & Profit calculation */}
-          <div className="p-3.5 bg-gradient-to-br from-amber-50/60 to-rose-50/60 rounded-2xl border border-rose-200/80 space-y-3">
+          <div className="p-3.5 bg-gradient-to-br from-amber-50/80 to-orange-50/80 rounded-2xl border border-orange-200 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-bold text-stone-800 uppercase tracking-wider block mb-1">
@@ -188,14 +197,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full text-sm font-black pl-9 pr-3 py-2 bg-white border border-rose-300 rounded-xl text-stone-900"
+                    className="w-full text-sm font-black pl-9 pr-3 py-2 bg-white border border-orange-300 rounded-xl text-stone-900 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1">
-                  Custo Insumos (R$)
+                  Custo / Insumos (R$)
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-stone-400">
@@ -208,7 +217,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     placeholder="0.00"
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full text-sm font-medium pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-800"
+                    className="w-full text-sm font-medium pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-800 focus:border-orange-500"
                   />
                 </div>
               </div>
@@ -221,7 +230,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   <TrendingUp className="w-4 h-4" />
                   <span>Lucro Unitário: {formatCurrency(unitProfit)}</span>
                 </div>
-                <div className="font-extrabold text-amber-700 px-2 py-0.5 rounded-full bg-amber-100">
+                <div className="font-extrabold text-orange-800 px-2.5 py-0.5 rounded-full bg-orange-100">
                   Margem: {profitMarginPercent}%
                 </div>
               </div>
@@ -230,14 +239,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
           <div>
             <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1">
-              Descrição / Ingredientes (opcional)
+              Acompanhamentos / Descrição (opcional)
             </label>
             <textarea
               rows={2}
-              placeholder="Ex: Leite moça, cacau 50%, manteiga de primeira e morangos frescos."
+              placeholder="Ex: Acompanha farofa artesanal temperada e vinagrete especial da casa."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
             />
           </div>
 
@@ -247,10 +256,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               id="product-active"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
-              className="rounded text-rose-600 focus:ring-rose-400"
+              className="rounded text-orange-600 focus:ring-orange-500"
             />
             <label htmlFor="product-active" className="text-xs font-semibold text-stone-700 cursor-pointer">
-              Disponível para venda no cardápio
+              Disponível para venda no cardápio de domingo
             </label>
           </div>
 
@@ -266,10 +275,10 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-200 transition-all flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-200 transition-all flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
-              {isSubmitting ? 'Salvando...' : 'Salvar Doce'}
+              {isSubmitting ? 'Salvando...' : 'Salvar Item'}
             </button>
           </div>
         </form>
