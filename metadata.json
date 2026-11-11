@@ -1,0 +1,6 @@
+{
+  "name": "DoceGestão - Gestão de Vendas de Doces",
+  "description": "Sistema completo para confeitaria gerenciar pedidos, lançamentos com calendário, controle de pagamentos, clientes, despesas e relatórios mensais de lucro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

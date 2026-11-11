@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "Sale": {
+      "title": "Sale",
+      "description": "Sweet confectionery sale and order record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "customerName": { "type": "string", "maxLength": 100 },
+        "customerPhone": { "type": "string", "maxLength": 30 },
+        "date": { "type": "string", "maxLength": 10 },
+        "isSunday": { "type": "boolean" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "amountPaid": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["pago", "pendente", "parcial", "fiado"] },
+        "paymentMethod": { "type": "string", "enum": ["pix", "dinheiro", "cartao_credito", "cartao_debito", "outro"] },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "customerName", "date", "totalAmount", "paymentStatus"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer contacts and details",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "address": { "type": "string", "maxLength": 200 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "name"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Sweet product item in catalog",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 50 },
+        "price": { "type": "number" },
+        "costPrice": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 20 },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "name", "price"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Business expense record for ingredients, packaging, etc.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "description": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 50 },
+        "amount": { "type": "number" },
+        "date": { "type": "string", "maxLength": 10 },
+        "paymentMethod": { "type": "string", "maxLength": 30 },
+        "notes": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "description", "amount", "date", "category"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Sales and orders registered by the user"
+    },
+    "/users/{userId}/customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Customer contacts and purchase information"
+    },
+    "/users/{userId}/products/{productId}": {
+      "schema": "Product",
+      "description": "Sweet products catalog with selling and cost prices"
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Expenses for ingredients, packaging, and operating costs"
+    }
+  }
+}
