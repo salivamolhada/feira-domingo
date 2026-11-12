@@ -649,15 +649,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Google Sign In failed:', err);
       const errorObj = err as { code?: string; message?: string };
       if (errorObj?.code === 'auth/popup-blocked') {
-        setAuthError('O navegador bloqueou a janela pop-up do Google. Permita pop-ups para este site e tente novamente.');
+        setAuthError('O navegador bloqueou o pop-up do Google. Permita pop-ups para esta página e clique novamente.');
       } else if (errorObj?.code === 'auth/popup-closed-by-user') {
-        setAuthError('A janela de login foi fechada antes de concluir a conexão com a conta Google.');
+        setAuthError('A janela de login do Google foi fechada antes de concluir a autenticação.');
       } else if (errorObj?.code === 'auth/unauthorized-domain') {
-        setAuthError('Domínio não autorizado no Firebase. Se você estiver usando um domínio personalizado, adicione-o aos domínios autorizados do Firebase.');
+        const currentDomain = window.location.hostname;
+        setAuthError(`DOMINIO_NAO_AUTORIZADO:${currentDomain}`);
       } else if (errorObj?.code === 'auth/cancelled-popup-request') {
         setAuthError(null);
       } else {
-        setAuthError(errorObj?.message || 'Falha ao conectar com o Google. Verifique sua conexão e tente novamente.');
+        setAuthError(errorObj?.message || 'Falha ao conectar com o Google. Tente novamente.');
       }
     }
   };

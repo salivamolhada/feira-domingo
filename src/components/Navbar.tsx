@@ -17,7 +17,10 @@ import {
   UtensilsCrossed,
   Zap,
   AlertCircle,
-  X
+  X,
+  Copy,
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
@@ -191,19 +194,93 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Auth Error Notification Banner if login failed */}
         {authError && (
-          <div className="mx-2 mb-2 p-3 bg-red-950/90 border border-red-500/80 rounded-2xl flex items-center justify-between gap-3 text-xs text-red-200 shadow-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span>{authError}</span>
-            </div>
-            <button
-              type="button"
-              onClick={clearAuthError}
-              className="p-1 text-red-300 hover:text-white rounded-lg hover:bg-red-900/50"
-              title="Fechar aviso"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          <div className="mx-2 mb-3 p-4 bg-stone-900 border border-orange-500/50 rounded-2xl text-xs text-stone-200 shadow-xl space-y-2.5">
+            {authError.startsWith('DOMINIO_NAO_AUTORIZADO:') ? (
+              (() => {
+                const domain = authError.replace('DOMINIO_NAO_AUTORIZADO:', '');
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2 text-orange-400 font-bold text-sm">
+                        <AlertCircle className="w-5 h-5 text-orange-400 shrink-0" />
+                        <span>Autorizar Domínio no Firebase Authentication</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearAuthError}
+                        className="p-1 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
+                        title="Fechar aviso"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <p className="text-stone-300 leading-relaxed">
+                      O Firebase bloqueia o login do Google quando a URL atual ainda não foi adicionada à lista de domínios autorizados do seu projeto <strong className="text-white">gen-lang-client-0233520699</strong>.
+                    </p>
+
+                    <div className="p-3 bg-stone-950/80 rounded-xl border border-stone-800 space-y-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[11px] text-stone-400 font-medium">Domínio atual a ser autorizado:</span>
+                        <div className="flex items-center gap-1.5 bg-stone-900 px-2.5 py-1 rounded-lg border border-stone-700">
+                          <code className="text-orange-300 font-mono font-bold select-all">{domain}</code>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(domain);
+                              alert('Domínio copiado para a área de transferência!');
+                            }}
+                            className="p-1 text-stone-300 hover:text-white transition-colors"
+                            title="Copiar domínio"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-stone-400 space-y-1 pt-1">
+                        <p className="font-bold text-stone-200">Como liberar em 3 passos simples:</p>
+                        <ol className="list-decimal list-inside space-y-1 pl-1 text-stone-300">
+                          <li>Abra o Console do Firebase no seu projeto.</li>
+                          <li>Vá em <strong>Authentication</strong> → aba <strong>Settings (Configurações)</strong> → <strong>Authorized domains (Domínios autorizados)</strong>.</li>
+                          <li>Clique em <strong>Add domain (Adicionar domínio)</strong>, cole <code className="text-orange-300 px-1 bg-stone-900 rounded">{domain}</code> e salve!</li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                      <a
+                        href="https://console.firebase.google.com/project/gen-lang-client-0233520699/authentication/settings"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-stone-950 font-black rounded-xl text-xs transition-colors shadow-sm"
+                      >
+                        <span>Abrir Configurações no Firebase Console</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <span className="text-[11px] text-emerald-400 font-semibold">
+                        💡 Seus dados continuam salvos no navegador normalmente!
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearAuthError}
+                  className="p-1 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
+                  title="Fechar aviso"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
