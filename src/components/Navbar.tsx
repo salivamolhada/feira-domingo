@@ -15,7 +15,9 @@ import {
   RefreshCw,
   Settings,
   UtensilsCrossed,
-  Zap
+  Zap,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
@@ -34,7 +36,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenExpenseModal,
   onOpenSettings,
 }) => {
-  const { user, loginWithGoogle, logout, resetToDemoData, businessName } = useData();
+  const { user, loginWithGoogle, logout, resetToDemoData, businessName, authError, clearAuthError } = useData();
+  const [isConnecting, setIsConnecting] = React.useState(false);
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    try {
+      await loginWithGoogle();
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Painel de Lucros', icon: TrendingUp },
@@ -156,16 +168,44 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={loginWithGoogle}
-                className="px-2.5 py-1.5 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border border-stone-700"
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-stone-950 font-black rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
                 title="Fazer login com Google para sincronizar com o banco de dados na nuvem"
               >
-                <CloudOff className="w-3.5 h-3.5 text-stone-400" />
-                <span className="hidden sm:inline">Conectar Nuvem</span>
+                {isConnecting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-stone-950" />
+                    <span className="hidden sm:inline">Conectando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CloudOff className="w-3.5 h-3.5 text-stone-950" />
+                    <span className="hidden sm:inline">Conectar Nuvem</span>
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
+
+        {/* Auth Error Notification Banner if login failed */}
+        {authError && (
+          <div className="mx-2 mb-2 p-3 bg-red-950/90 border border-red-500/80 rounded-2xl flex items-center justify-between gap-3 text-xs text-red-200 shadow-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{authError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={clearAuthError}
+              className="p-1 text-red-300 hover:text-white rounded-lg hover:bg-red-900/50"
+              title="Fechar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Tab Navigation Row */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2.5 border-t border-stone-800/80">

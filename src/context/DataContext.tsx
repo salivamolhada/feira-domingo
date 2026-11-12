@@ -43,6 +43,8 @@ interface DataContextType {
   logout: () => Promise<void>;
   selectedCalendarDate: string;
   setSelectedCalendarDate: (date: string) => void;
+  authError: string | null;
+  clearAuthError: () => void;
   businessName: string;
   pixKey: string;
   pixReceiver: string;
@@ -634,11 +636,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const clearAuthError = () => setAuthError(null);
+
   const loginWithGoogle = async () => {
+    setAuthError(null);
     try {
+      googleProvider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, googleProvider);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Google Sign In failed:', err);
+      const errorObj = err as { code?: string; message?: string };
+      if (errorObj?.code === 'auth/popup-blocked') {
+        setAuthError('O navegador bloqueou a janela pop-up do Google. Permita pop-ups para este site e tente novamente.');
+      } else if (errorObj?.code === 'auth/popup-closed-by-user') {
+        setAuthError('A janela de login foi fechada antes de concluir a conexão com a conta Google.');
+      } else if (errorObj?.code === 'auth/unauthorized-domain') {
+        setAuthError('Domínio não autorizado no Firebase. Se você estiver usando um domínio personalizado, adicione-o aos domínios autorizados do Firebase.');
+      } else if (errorObj?.code === 'auth/cancelled-popup-request') {
+        setAuthError(null);
+      } else {
+        setAuthError(errorObj?.message || 'Falha ao conectar com o Google. Verifique sua conexão e tente novamente.');
+      }
     }
   };
 
@@ -675,6 +695,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         selectedCalendarDate,
         setSelectedCalendarDate,
+        authError,
+        clearAuthError,
         businessName,
         pixKey,
         pixReceiver,
