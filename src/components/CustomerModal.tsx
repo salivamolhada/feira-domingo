@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Phone, MapPin, FileText, CheckCircle2, MessageCircle, DollarSign } from 'lucide-react';
+import { X, User, Phone, MapPin, CheckCircle2, MessageCircle, AlertCircle } from 'lucide-react';
 import { Customer } from '../types';
 import { useData } from '../context/DataContext';
 import { formatCurrency, formatFriendlyDate } from '../utils/dateUtils';
@@ -23,6 +23,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   const [address, setAddress] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (customerToEdit) {
@@ -36,9 +37,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       setAddress('');
       setNotes('');
     }
+    setFormError(null);
   }, [customerToEdit, isOpen]);
 
-  // Find customer sales history
   const customerSales = React.useMemo(() => {
     if (!customerToEdit) return [];
     return sales.filter(
@@ -56,8 +57,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     if (!name.trim()) {
-      alert('Informe o nome do cliente.');
+      setFormError('Informe o nome do cliente.');
       return;
     }
 
@@ -75,7 +77,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Error saving customer:', err);
-      alert('Erro ao salvar cliente.');
+      setFormError('Erro ao salvar cliente. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -83,31 +85,31 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
   const openWhatsApp = () => {
     if (!phone) return;
-    let msg = `Olá ${name}! Tudo bem? Aqui é da ${businessName || 'confeitaria artesanal'} 🍰✨`;
+    let msg = `Olá *${name}*! Tudo bem? Aqui é do *${businessName || 'Espeto & Brasa'}* 🎄🍢`;
     if (totalPending > 0) {
-      msg += `\n\nPassando com carinho para lembrar sobre o saldo pendente de *${formatCurrency(
+      msg += `\n\nPassando para lembrar sobre o saldo pendente de *${formatCurrency(
         totalPending
       )}*.`;
       if (pixKey) {
         msg += `\n💳 *Chave Pix para acerto:* ${pixKey}`;
       }
-      msg += `\nMuito obrigada pela preferência! ❤️`;
+      msg += `\nMuito obrigado(a) pela preferência! 🙌`;
     } else {
-      msg += `\nComo estão os doces? Já estamos organizando a produção do próximo domingo e adoraríamos preparar sua sobremesa favorita!`;
+      msg += `\nJá estamos preparando os espetinhos na brasa, salgados e bebidas bem geladas para o próximo domingo! Gostaria de reservar seu pedido?`;
     }
     const url = getWhatsAppUrl(phone, msg);
-    if (url) window.open(url, '_blank');
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-rose-100 max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-emerald-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 max-w-lg w-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/70 to-pink-50/70">
+        <div className="px-5 py-4 border-b border-red-100 flex items-center justify-between bg-gradient-to-r from-red-50 via-amber-50/70 to-emerald-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-200">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 text-white flex items-center justify-center shadow-md shadow-red-200">
               <User className="w-5 h-5" />
             </div>
             <div>
@@ -133,7 +135,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
           <div className="px-5 py-3 bg-stone-50 border-b border-stone-200 grid grid-cols-2 gap-3 text-xs">
             <div className="bg-white p-2.5 rounded-xl border border-stone-200">
               <span className="text-stone-500 block">Total já comprado</span>
-              <span className="text-sm font-extrabold text-stone-900">
+              <span className="text-sm font-extrabold font-mono-num text-stone-900">
                 {formatCurrency(totalSpent)}
               </span>
             </div>
@@ -147,7 +149,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
               <span className="block font-medium">
                 {totalPending > 0 ? 'Saldo a Receber / Fiado' : 'Situação Financeira'}
               </span>
-              <span className="text-sm font-black">
+              <span className="text-sm font-black font-mono-num">
                 {totalPending > 0 ? formatCurrency(totalPending) : 'Em dia (Quitado)'}
               </span>
             </div>
@@ -156,6 +158,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {formError && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1">
               Nome Completo do Cliente
@@ -163,10 +172,10 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
             <input
               type="text"
               required
-              placeholder="Ex: Mariana Silva"
+              placeholder="Ex: Marcos Vinícius"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm font-medium px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              className="w-full text-sm font-medium px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
 
@@ -195,7 +204,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 <button
                   type="button"
                   onClick={openWhatsApp}
-                  className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                  className="w-full py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                 >
                   <MessageCircle className="w-4 h-4" />
                   Abrir WhatsApp
@@ -228,14 +237,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
             </label>
             <textarea
               rows={2}
-              placeholder="Ex: Gosta de muito brigadeiro belga, pede sempre aos domingos de manhã"
+              placeholder="Ex: Prefere espetinho de alcatra ao ponto e energético Monster bem gelado aos domingos."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl"
             />
           </div>
 
-          {/* Recent Orders List if any */}
           {customerSales.length > 0 && (
             <div className="pt-2">
               <span className="text-xs font-bold text-stone-700 block mb-2">
@@ -252,11 +260,11 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                         {formatFriendlyDate(s.date)}
                       </span>
                       <span className="text-stone-500 ml-2">
-                        {s.items.length} {s.items.length === 1 ? 'doce' : 'doces'}
+                        {s.items.length} {s.items.length === 1 ? 'item' : 'itens'}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-extrabold text-stone-900">
+                      <span className="font-extrabold font-mono-num text-stone-900">
                         {formatCurrency(s.totalAmount)}
                       </span>
                       <span
@@ -289,7 +297,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold shadow-md shadow-rose-200 transition-all flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-red-200 transition-all flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
               {isSubmitting ? 'Salvando...' : 'Salvar Cliente'}

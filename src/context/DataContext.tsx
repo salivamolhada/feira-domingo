@@ -162,6 +162,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, [loadLocalData]);
 
+  const stripUndefined = <T extends Record<string, unknown>>(obj: T): T => {
+    const cleaned = { ...obj };
+    (Object.keys(cleaned) as Array<keyof T>).forEach((key) => {
+      if (cleaned[key] === undefined) {
+        delete cleaned[key];
+      }
+    });
+    return cleaned;
+  };
+
   // Sync with Firestore when logged in
   useEffect(() => {
     if (!user) return;
@@ -180,21 +190,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (snapshot) => {
         const loaded: Sale[] = [];
         snapshot.forEach((d) => loaded.push({ ...d.data(), id: d.id } as Sale));
-        // Sort by date desc
-        loaded.sort((a, b) => b.date.localeCompare(a.date));
+        loaded.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         setSales(loaded);
         setIsSyncing(false);
 
-        // If user is freshly logged in and has 0 sales in Firestore, check if we have local sales to sync up
-        if (isFirstSales && loaded.length === 0) {
+        if (isFirstSales) {
           isFirstSales = false;
-          const localStored = localStorage.getItem(STORAGE_KEYS.SALES);
-          if (localStored) {
-            const localList: Sale[] = JSON.parse(localStored);
-            localList.forEach((s) => {
-              const newDocRef = doc(collection(db, 'users', userId, 'sales'));
-              setDoc(newDocRef, { ...s, userId, id: newDocRef.id }).catch(console.error);
-            });
+          if (loaded.length === 0) {
+            try {
+              const localStored = localStorage.getItem(STORAGE_KEYS.SALES);
+              if (localStored) {
+                const localList: Sale[] = JSON.parse(localStored);
+                localList.forEach((s) => {
+                  const newDocRef = doc(collection(db, 'users', userId, 'sales'));
+                  const sanitized = stripUndefined({
+                    ...s,
+                    items: (s.items || []).map((it) => stripUndefined({ ...it })),
+                    userId,
+                    id: newDocRef.id,
+                  });
+                  setDoc(newDocRef, sanitized).catch(console.error);
+                });
+              }
+            } catch (err) {
+              console.error('Erro ao sincronizar vendas locais:', err);
+            }
           }
         }
       },
@@ -210,18 +230,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (snapshot) => {
         const loaded: Customer[] = [];
         snapshot.forEach((d) => loaded.push({ ...d.data(), id: d.id } as Customer));
-        loaded.sort((a, b) => a.name.localeCompare(b.name));
+        loaded.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setCustomers(loaded);
 
-        if (isFirstCust && loaded.length === 0) {
+        if (isFirstCust) {
           isFirstCust = false;
-          const localStored = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
-          if (localStored) {
-            const list: Customer[] = JSON.parse(localStored);
-            list.forEach((c) => {
-              const newDocRef = doc(collection(db, 'users', userId, 'customers'));
-              setDoc(newDocRef, { ...c, userId, id: newDocRef.id }).catch(console.error);
-            });
+          if (loaded.length === 0) {
+            try {
+              const localStored = localStorage.getItem(STORAGE_KEYS.CUSTOMERS);
+              if (localStored) {
+                const list: Customer[] = JSON.parse(localStored);
+                list.forEach((c) => {
+                  const newDocRef = doc(collection(db, 'users', userId, 'customers'));
+                  setDoc(newDocRef, stripUndefined({ ...c, userId, id: newDocRef.id })).catch(console.error);
+                });
+              }
+            } catch (err) {
+              console.error('Erro ao sincronizar clientes locais:', err);
+            }
           }
         }
       },
@@ -236,18 +262,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (snapshot) => {
         const loaded: Product[] = [];
         snapshot.forEach((d) => loaded.push({ ...d.data(), id: d.id } as Product));
-        loaded.sort((a, b) => a.name.localeCompare(b.name));
+        loaded.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         setProducts(loaded);
 
-        if (isFirstProd && loaded.length === 0) {
+        if (isFirstProd) {
           isFirstProd = false;
-          const localStored = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-          if (localStored) {
-            const list: Product[] = JSON.parse(localStored);
-            list.forEach((p) => {
-              const newDocRef = doc(collection(db, 'users', userId, 'products'));
-              setDoc(newDocRef, { ...p, userId, id: newDocRef.id }).catch(console.error);
-            });
+          if (loaded.length === 0) {
+            try {
+              const localStored = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+              if (localStored) {
+                const list: Product[] = JSON.parse(localStored);
+                list.forEach((p) => {
+                  const newDocRef = doc(collection(db, 'users', userId, 'products'));
+                  setDoc(newDocRef, stripUndefined({ ...p, userId, id: newDocRef.id })).catch(console.error);
+                });
+              }
+            } catch (err) {
+              console.error('Erro ao sincronizar produtos locais:', err);
+            }
           }
         }
       },
@@ -262,18 +294,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       (snapshot) => {
         const loaded: Expense[] = [];
         snapshot.forEach((d) => loaded.push({ ...d.data(), id: d.id } as Expense));
-        loaded.sort((a, b) => b.date.localeCompare(a.date));
+        loaded.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         setExpenses(loaded);
 
-        if (isFirstExp && loaded.length === 0) {
+        if (isFirstExp) {
           isFirstExp = false;
-          const localStored = localStorage.getItem(STORAGE_KEYS.EXPENSES);
-          if (localStored) {
-            const list: Expense[] = JSON.parse(localStored);
-            list.forEach((e) => {
-              const newDocRef = doc(collection(db, 'users', userId, 'expenses'));
-              setDoc(newDocRef, { ...e, userId, id: newDocRef.id }).catch(console.error);
-            });
+          if (loaded.length === 0) {
+            try {
+              const localStored = localStorage.getItem(STORAGE_KEYS.EXPENSES);
+              if (localStored) {
+                const list: Expense[] = JSON.parse(localStored);
+                list.forEach((e) => {
+                  const newDocRef = doc(collection(db, 'users', userId, 'expenses'));
+                  setDoc(newDocRef, stripUndefined({ ...e, userId, id: newDocRef.id })).catch(console.error);
+                });
+              }
+            } catch (err) {
+              console.error('Erro ao sincronizar despesas locais:', err);
+            }
           }
         }
       },
@@ -312,28 +350,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const saleDate = saleData.date || formatToDateInput(new Date());
     const isSunday = isSundayDate(saleDate);
 
-    const fullSale: Sale = {
+    const fullSale: Sale = stripUndefined({
       id: existingId || `sale-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       userId: user?.uid || 'local-user',
       customerName: saleData.customerName || 'Cliente Balcão',
       customerPhone: saleData.customerPhone || '',
-      customerId: saleData.customerId,
+      customerId: saleData.customerId || '',
       date: saleDate,
       isSunday,
-      items: saleData.items || [],
+      items: (saleData.items || []).map((item) => stripUndefined({ ...item })),
       totalAmount: Number(saleData.totalAmount) || 0,
       amountPaid: Number(saleData.amountPaid) || 0,
       paymentStatus: saleData.paymentStatus || 'pago',
       paymentMethod: saleData.paymentMethod || 'pix',
       orderStatus: saleData.orderStatus || 'entregue',
-      deliveryTime: saleData.deliveryTime,
+      deliveryTime: saleData.deliveryTime || '',
       deliveryType: saleData.deliveryType || 'retirada',
-      deliveryFee: saleData.deliveryFee || 0,
-      discount: saleData.discount || 0,
+      deliveryFee: Number(saleData.deliveryFee) || 0,
+      discount: Number(saleData.discount) || 0,
       notes: saleData.notes || '',
       createdAt: saleData.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     if (user) {
       try {
@@ -424,7 +462,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     customerData: Partial<Customer>,
     existingId?: string
   ): Promise<Customer> => {
-    const fullCustomer: Customer = {
+    const fullCustomer: Customer = stripUndefined({
       id: existingId || `cust-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       userId: user?.uid || 'local-user',
       name: customerData.name || 'Novo Cliente',
@@ -432,7 +470,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       address: customerData.address || '',
       notes: customerData.notes || '',
       createdAt: customerData.createdAt || new Date().toISOString(),
-    };
+    });
 
     if (user) {
       try {
@@ -472,10 +510,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const saveProduct = async (productData: Partial<Product>, existingId?: string): Promise<void> => {
-    const fullProduct: Product = {
+    const fullProduct: Product = stripUndefined({
       id: existingId || `prod-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       userId: user?.uid || 'local-user',
-      name: productData.name || 'Novo Doce',
+      name: productData.name || 'Novo Item',
       category: productData.category || 'Geral',
       price: Number(productData.price) || 0,
       costPrice: Number(productData.costPrice) || 0,
@@ -483,7 +521,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       active: productData.active !== undefined ? productData.active : true,
       description: productData.description || '',
       createdAt: productData.createdAt || new Date().toISOString(),
-    };
+    });
 
     if (user) {
       try {
@@ -521,7 +559,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const saveExpense = async (expenseData: Partial<Expense>, existingId?: string): Promise<void> => {
-    const fullExpense: Expense = {
+    const fullExpense: Expense = stripUndefined({
       id: existingId || `exp-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
       userId: user?.uid || 'local-user',
       description: expenseData.description || 'Despesa Espetos & Bebidas',
@@ -531,7 +569,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       paymentMethod: expenseData.paymentMethod || 'pix',
       notes: expenseData.notes || '',
       createdAt: expenseData.createdAt || new Date().toISOString(),
-    };
+    });
 
     if (user) {
       try {
@@ -575,21 +613,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       setIsSyncing(true);
       try {
-        // Upload products
         for (const p of demo.products) {
-          await setDoc(doc(db, 'users', uid, 'products', p.id), p);
+          await setDoc(doc(db, 'users', uid, 'products', p.id), stripUndefined({ ...p }));
         }
-        // Upload customers
         for (const c of demo.customers) {
-          await setDoc(doc(db, 'users', uid, 'customers', c.id), c);
+          await setDoc(doc(db, 'users', uid, 'customers', c.id), stripUndefined({ ...c }));
         }
-        // Upload sales
         for (const s of demo.sales) {
-          await setDoc(doc(db, 'users', uid, 'sales', s.id), s);
+          await setDoc(
+            doc(db, 'users', uid, 'sales', s.id),
+            stripUndefined({ ...s, items: s.items.map((it) => stripUndefined({ ...it })) })
+          );
         }
-        // Upload expenses
         for (const e of demo.expenses) {
-          await setDoc(doc(db, 'users', uid, 'expenses', e.id), e);
+          await setDoc(doc(db, 'users', uid, 'expenses', e.id), stripUndefined({ ...e }));
         }
       } catch (err) {
         console.error('Error seeding to firestore:', err);

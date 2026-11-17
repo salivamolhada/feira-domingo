@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #071913;
+    color: #1c1917;
+  }
+
+  .font-mono-num {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 @layer utilities {
   /* Hide scrollbar for clean horizontal tabs */
   .no-scrollbar::-webkit-scrollbar {
@@ -8,6 +21,163 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+/* Christmas Theme Keyframes (Compositor-only: transform & opacity) */
+@keyframes christmasSnowfall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  90% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate3d(35px, 108vh, 0) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes santaFlight {
+  0% {
+    transform: translate3d(-340px, 8px, 0) scale(0.95);
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  25% {
+    transform: translate3d(20vw, -2px, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(52vw, 8px, 0) scale(1.02);
+  }
+  75% {
+    transform: translate3d(84vw, -2px, 0) scale(1);
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(115vw, 6px, 0) scale(0.95);
+    opacity: 0;
+  }
+}
+
+@keyframes reindeerGallop {
+  0%, 100% {
+    transform: translate3d(0, 0px, 0) rotate(-1.5deg);
+  }
+  50% {
+    transform: translate3d(0, -6px, 0) rotate(1.5deg);
+  }
+}
+
+@keyframes giftDropFromSleigh {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(0.45);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    transform: translate3d(-4px, 12px, 0) rotate(-8deg) scale(0.95);
+  }
+  55% {
+    transform: translate3d(6px, 42px, 0) rotate(10deg) scale(0.9);
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.85;
+    transform: translate3d(-4px, 68px, 0) rotate(-6deg) scale(0.8);
+  }
+  100% {
+    transform: translate3d(0, 82px, 0) rotate(6deg) scale(0.65);
+    opacity: 0;
+  }
+}
+
+@keyframes sparkleTrail {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.4) rotate(0deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+    transform: translate3d(-12px, 4px, 0) scale(1.15) rotate(45deg);
+  }
+  70% {
+    opacity: 0.75;
+    transform: translate3d(-28px, 12px, 0) scale(0.85) rotate(110deg);
+  }
+  100% {
+    transform: translate3d(-44px, 22px, 0) scale(0.1) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes bulbBlink {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.88);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.22);
+  }
+}
+
+@keyframes starPulse {
+  0%, 100% {
+    opacity: 0.75;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.animate-snowfall {
+  animation: christmasSnowfall linear infinite;
+}
+
+.animate-santa-flight {
+  animation: santaFlight 24s linear infinite;
+}
+
+.animate-reindeer-gallop {
+  animation: reindeerGallop 0.85s ease-in-out infinite;
+}
+
+.animate-gift-drop {
+  animation: giftDropFromSleigh 3.6s ease-in infinite;
+}
+
+.animate-sparkle-trail {
+  animation: sparkleTrail 1.4s ease-out infinite;
+}
+
+.animate-bulb {
+  animation: bulbBlink 1.5s ease-in-out infinite;
+}
+
+.animate-star-pulse {
+  animation: starPulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-snowfall,
+  .animate-santa-flight,
+  .animate-reindeer-gallop,
+  .animate-gift-drop,
+  .animate-sparkle-trail,
+  .animate-bulb,
+  .animate-star-pulse {
+    animation: none !important;
   }
 }
 

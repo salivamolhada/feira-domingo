@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Receipt, DollarSign, Calendar as CalendarIcon, CheckCircle2, Flame } from 'lucide-react';
+import { X, Receipt, Calendar as CalendarIcon, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Expense, PaymentMethod } from '../types';
 import { useData } from '../context/DataContext';
 import { formatToDateInput } from '../utils/dateUtils';
@@ -30,6 +30,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   const [notes, setNotes] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (expenseToEdit) {
@@ -47,16 +48,19 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
       setPaymentMethod('pix');
       setNotes('');
     }
+    setFormError(null);
   }, [expenseToEdit, defaultDate, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     if (!description.trim()) {
-      alert('Informe a descrição da despesa (ex: Carne alcatra, carvão, fardo de energético).');
+      setFormError('Informe a descrição da despesa (ex: Carne alcatra, carvão, fardo de energético).');
       return;
     }
     if (!amount || Number(amount) <= 0) {
-      alert('Informe um valor válido para a despesa.');
+      setFormError('Informe um valor válido maior que zero para a despesa.');
       return;
     }
 
@@ -76,7 +80,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Error saving expense:', err);
-      alert('Ocorreu um erro ao salvar a despesa.');
+      setFormError('Ocorreu um erro ao salvar a despesa. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -85,12 +89,12 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-emerald-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 max-w-lg w-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between bg-gradient-to-r from-red-50 via-orange-50 to-stone-50">
+        <div className="px-5 py-4 border-b border-red-100 flex items-center justify-between bg-gradient-to-r from-red-50 via-amber-50/70 to-emerald-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-600 to-orange-500 text-white flex items-center justify-center shadow-md shadow-red-200">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-600 to-amber-500 text-white flex items-center justify-center shadow-md shadow-red-200">
               <Receipt className="w-5 h-5" />
             </div>
             <div>
@@ -113,6 +117,13 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {formError && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1">
               Descrição da Compra / Despesa
@@ -123,7 +134,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
               placeholder="Ex: Alcatra no atacado (15kg) ou Saco de Carvão 10kg"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-100"
+              className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-red-600 focus:ring-2 focus:ring-red-100"
             />
           </div>
 
@@ -144,7 +155,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
                   placeholder="0,00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full text-sm font-bold pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-100 text-stone-900"
+                  className="w-full text-sm font-bold font-mono-num pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl focus:border-red-600 focus:ring-2 focus:ring-red-100 text-stone-900"
                 />
               </div>
             </div>
@@ -156,33 +167,33 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as Expense['category'])}
-                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-red-500"
+                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-red-600"
               >
-                <option value="carnes_insumos">🥩 Carnes & Insumos</option>
-                <option value="bebidas_estoque">🥤 Bebidas & Energéticos</option>
-                <option value="carvao_gas">🔥 Carvão & Gás</option>
-                <option value="embalagens">📦 Espetos & Embalagens</option>
-                <option value="entrega">🛵 Entrega / Frete / Gelo</option>
-                <option value="equipamentos">🔪 Grelhas & Utensílios</option>
-                <option value="marketing">📢 Divulgação</option>
-                <option value="outros">🧾 Outros Custos</option>
+                <option value="carnes_insumos">Carnes & Insumos</option>
+                <option value="bebidas_estoque">Bebidas & Energéticos</option>
+                <option value="carvao_gas">Carvão & Gás</option>
+                <option value="embalagens">Espetos & Embalagens</option>
+                <option value="entrega">Entrega / Frete / Gelo</option>
+                <option value="equipamentos">Grelhas & Utensílios</option>
+                <option value="marketing">Divulgação</option>
+                <option value="outros">Outros Custos</option>
               </select>
             </div>
           </div>
 
           {/* Date with Calendar toggle */}
-          <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200 space-y-2">
+          <div className="p-3 bg-emerald-50/50 rounded-2xl border border-emerald-200 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-stone-700 flex items-center gap-1.5">
-                <CalendarIcon className="w-4 h-4 text-orange-600" />
+                <CalendarIcon className="w-4 h-4 text-red-600" />
                 Data da Despesa
               </label>
               <button
                 type="button"
                 onClick={() => setShowCalendar(!showCalendar)}
-                className="text-xs font-bold text-orange-600 hover:text-orange-700 underline"
+                className="text-xs font-bold text-red-600 hover:text-red-700 underline"
               >
-                {showCalendar ? 'Ocultar Calendário' : '📅 Escolher no Calendário'}
+                {showCalendar ? 'Ocultar Calendário' : 'Escolher no Calendário'}
               </button>
             </div>
 
@@ -249,7 +260,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md shadow-red-200 transition-all flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-red-200 transition-all flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
               {isSubmitting ? 'Salvando...' : 'Salvar Despesa'}

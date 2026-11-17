@@ -5,13 +5,9 @@ import {
   Copy,
   Download,
   CheckCircle2,
-  Calendar as CalendarIcon,
-  TrendingUp,
   Receipt,
-  Sparkles,
   ShoppingBag,
-  Flame,
-  UtensilsCrossed
+  Flame
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import {
@@ -26,7 +22,6 @@ export const ReportView: React.FC = () => {
 
   const [copiedToast, setCopiedToast] = useState<boolean>(false);
 
-  // Available months
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
     const now = new Date();
@@ -46,7 +41,6 @@ export const ReportView: React.FC = () => {
     availableMonths[0] || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
   );
 
-  // Month data
   const monthSales = useMemo(() => {
     return sales
       .filter((s) => s.date && s.date.startsWith(selectedMonth))
@@ -59,7 +53,6 @@ export const ReportView: React.FC = () => {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [expenses, selectedMonth]);
 
-  // Financial calculations
   const totalRevenue = monthSales.reduce((sum, s) => sum + s.totalAmount, 0);
   const totalReceived = monthSales.reduce((sum, s) => sum + s.amountPaid, 0);
   const totalPending = Math.max(0, totalRevenue - totalReceived);
@@ -72,12 +65,10 @@ export const ReportView: React.FC = () => {
   const averageTicket =
     monthSales.length > 0 ? (totalRevenue / monthSales.length) : 0;
 
-  // Sunday sales
   const sundaySales = monthSales.filter((s) => isSundayDate(s.date));
   const sundayRevenue = sundaySales.reduce((sum, s) => sum + s.totalAmount, 0);
   const sundayShare = totalRevenue > 0 ? ((sundayRevenue / totalRevenue) * 100).toFixed(0) : '0';
 
-  // Sundays breakdown
   const sundayGroups = useMemo(() => {
     const map: Record<string, { date: string; total: number; count: number; items: string[] }> = {};
     sundaySales.forEach((s) => {
@@ -95,7 +86,6 @@ export const ReportView: React.FC = () => {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [sundaySales]);
 
-  // Expenses by Category
   const expenseCategories = useMemo(() => {
     const map: Record<string, number> = {};
     monthExpenses.forEach((e) => {
@@ -104,12 +94,10 @@ export const ReportView: React.FC = () => {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [monthExpenses]);
 
-  // Print function
   const handlePrint = () => {
     window.print();
   };
 
-  // WhatsApp formatted text summary
   const generateWhatsAppSummary = () => {
     const monthName = getMonthLabel(selectedMonth);
     let text = `📊 *FECHAMENTO MENSAL - ${businessName.toUpperCase() || 'ESPETO & BRASA'}*\n`;
@@ -133,9 +121,8 @@ export const ReportView: React.FC = () => {
     setTimeout(() => setCopiedToast(false), 3000);
   };
 
-  // Export CSV
   const handleExportCSV = () => {
-    let csv = '\uFEFF'; // UTF-8 BOM
+    let csv = '\uFEFF';
     csv += `RELATÓRIO MENSAL DE VENDAS E DESPESAS - ${businessName || 'Espeto & Brasa'} - ${getMonthLabel(selectedMonth)}\n\n`;
     csv += `RESUMO FINANCEIRO\n`;
     csv += `Faturamento Bruto;${formatCurrency(totalRevenue)}\n`;
@@ -170,25 +157,26 @@ export const ReportView: React.FC = () => {
   return (
     <div className="space-y-6 pb-16">
       {/* Non-printable Control Header */}
-      <div className="print:hidden bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="print:hidden bg-white/95 backdrop-blur-md p-5 rounded-3xl border border-emerald-950/15 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📈</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
+              <FileText className="w-5 h-5" />
+            </div>
             <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
               Relatório de Fechamento Mensal
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-stone-500 font-medium mt-0.5">
+          <p className="text-xs sm:text-sm text-stone-500 font-medium mt-1">
             Gere o balanço completo de vendas de espetinhos, bebidas, despesas e lucro líquido
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          {/* Month selector */}
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="text-xs sm:text-sm font-extrabold px-3 py-2 bg-orange-50 border border-orange-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+            className="text-xs sm:text-sm font-extrabold px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-400"
           >
             {availableMonths.map((m) => (
               <option key={m} value={m}>
@@ -197,33 +185,30 @@ export const ReportView: React.FC = () => {
             ))}
           </select>
 
-          {/* Copy WhatsApp */}
           <button
             type="button"
             onClick={generateWhatsAppSummary}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap"
             title="Copiar resumo para enviar no WhatsApp"
           >
             {copiedToast ? <CheckCircle2 className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
             {copiedToast ? 'Copiado!' : 'Copiar Resumo'}
           </button>
 
-          {/* Export CSV */}
           <button
             type="button"
             onClick={handleExportCSV}
-            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap"
             title="Exportar planilha CSV"
           >
             <Download className="w-4 h-4" />
             CSV
           </button>
 
-          {/* Print Button */}
           <button
             type="button"
             onClick={handlePrint}
-            className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-stone-950 font-black rounded-xl text-xs transition-all shadow-md shadow-orange-950/20 flex items-center gap-1.5"
+            className="px-4 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white font-black rounded-xl text-xs transition-all shadow-md shadow-red-950/20 flex items-center gap-1.5 whitespace-nowrap"
           >
             <Printer className="w-4 h-4" />
             Imprimir / Salvar PDF
@@ -232,11 +217,10 @@ export const ReportView: React.FC = () => {
       </div>
 
       {/* PRINTABLE REPORT DOCUMENT CONTAINER */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-md space-y-8 print:border-none print:shadow-none print:p-0">
-        {/* Document Header */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-emerald-950/15 shadow-xl space-y-8 print:border-none print:shadow-none print:p-0">
         <div className="border-b-2 border-stone-800 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-orange-600">
+            <span className="text-xs font-black uppercase tracking-widest text-red-600">
               {businessName || 'Espeto & Brasa - Gestão de Vendas'}
             </span>
             <h2 className="text-2xl sm:text-3xl font-black text-stone-900 mt-1">
@@ -257,7 +241,7 @@ export const ReportView: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
             <span className="text-[11px] font-bold text-stone-500 uppercase block">Faturamento Bruto</span>
-            <span className="text-xl font-black text-stone-900 mt-1 block">
+            <span className="text-xl font-black font-mono-num text-stone-900 mt-1 block">
               {formatCurrency(totalRevenue)}
             </span>
             <span className="text-[10px] text-stone-400 font-medium">{monthSales.length} pedidos no mês</span>
@@ -265,7 +249,7 @@ export const ReportView: React.FC = () => {
 
           <div className="p-4 rounded-2xl bg-red-50/70 border border-red-200">
             <span className="text-[11px] font-bold text-red-700 uppercase block">Total de Despesas</span>
-            <span className="text-xl font-black text-red-600 mt-1 block">
+            <span className="text-xl font-black font-mono-num text-red-600 mt-1 block">
               {formatCurrency(totalExpensesAmount)}
             </span>
             <span className="text-[10px] text-red-500 font-medium">{monthExpenses.length} compras de insumos</span>
@@ -273,41 +257,41 @@ export const ReportView: React.FC = () => {
 
           <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
             <span className="text-[11px] font-bold text-emerald-800 uppercase block">Lucro Líquido Real</span>
-            <span className="text-xl font-black text-emerald-700 mt-1 block">
+            <span className={`text-xl font-black font-mono-num mt-1 block ${netProfitRealized < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
               {formatCurrency(netProfitRealized)}
             </span>
-            <span className="text-[10px] text-emerald-600 font-extrabold">{profitMargin}% margem de lucro</span>
+            <span className="text-[10px] text-emerald-700 font-extrabold">{profitMargin}% margem de lucro</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200">
-            <span className="text-[11px] font-bold text-orange-900 uppercase block">Vendas de Domingo</span>
-            <span className="text-xl font-black text-orange-950 mt-1 block">
+          <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+            <span className="text-[11px] font-bold text-amber-900 uppercase block">Vendas de Domingo</span>
+            <span className="text-xl font-black font-mono-num text-amber-950 mt-1 block">
               {formatCurrency(sundayRevenue)}
             </span>
-            <span className="text-[10px] text-orange-700 font-bold">{sundayShare}% do faturamento</span>
+            <span className="text-[10px] text-amber-800 font-bold">{sundayShare}% do faturamento</span>
           </div>
         </div>
 
-        {/* Detailed Breakdown: Recebido vs Pendente */}
+        {/* Detailed Breakdown */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-stone-50/80 border border-stone-200 text-xs">
           <div>
             <span className="text-stone-500 block">Total Efetivamente Recebido (Caixa):</span>
-            <span className="text-base font-extrabold text-emerald-700">{formatCurrency(totalReceived)}</span>
+            <span className="text-base font-extrabold font-mono-num text-emerald-700">{formatCurrency(totalReceived)}</span>
           </div>
           <div>
             <span className="text-stone-500 block">Total em Aberto / Fiado a Receber:</span>
-            <span className="text-base font-extrabold text-orange-700">{formatCurrency(totalPending)}</span>
+            <span className="text-base font-extrabold font-mono-num text-red-700">{formatCurrency(totalPending)}</span>
           </div>
           <div>
             <span className="text-stone-500 block">Ticket Médio por Venda:</span>
-            <span className="text-base font-extrabold text-stone-900">{formatCurrency(averageTicket)}</span>
+            <span className="text-base font-extrabold font-mono-num text-stone-900">{formatCurrency(averageTicket)}</span>
           </div>
         </div>
 
         {/* Sunday Performance Table */}
         <div className="space-y-3">
           <h3 className="text-base font-black text-stone-900 flex items-center gap-1.5 border-b border-stone-200 pb-2">
-            <Flame className="w-4 h-4 text-orange-600" />
+            <Flame className="w-4 h-4 text-red-600" />
             Desempenho dos Domingos na Brasa
           </h3>
 
@@ -316,7 +300,7 @@ export const ReportView: React.FC = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border border-stone-200 rounded-xl overflow-hidden">
-                <thead className="bg-orange-50 text-orange-950 font-bold border-b border-orange-200">
+                <thead className="bg-red-50 text-red-950 font-bold border-b border-red-200">
                   <tr>
                     <th className="p-3">Data do Domingo</th>
                     <th className="p-3">Qtd. Pedidos</th>
@@ -332,7 +316,7 @@ export const ReportView: React.FC = () => {
                       </td>
                       <td className="p-3 text-stone-700">{sun.count} pedidos</td>
                       <td className="p-3 text-stone-600 truncate max-w-xs">{sun.items.slice(0, 3).join(', ')}</td>
-                      <td className="p-3 text-right font-black text-orange-950">{formatCurrency(sun.total)}</td>
+                      <td className="p-3 text-right font-black font-mono-num text-red-800">{formatCurrency(sun.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -344,7 +328,7 @@ export const ReportView: React.FC = () => {
         {/* Expenses by Category */}
         <div className="space-y-3">
           <h3 className="text-base font-black text-stone-900 flex items-center gap-1.5 border-b border-stone-200 pb-2">
-            <Receipt className="w-4 h-4 text-red-500" />
+            <Receipt className="w-4 h-4 text-red-600" />
             Despesas e Insumos por Categoria
           </h3>
 
@@ -355,7 +339,7 @@ export const ReportView: React.FC = () => {
               {expenseCategories.map(([cat, amount]) => (
                 <div key={cat} className="p-3 rounded-xl bg-stone-50 border border-stone-200 text-xs">
                   <span className="text-stone-500 capitalize block">{cat.replace('_', ' ')}</span>
-                  <span className="text-sm font-black text-stone-900 mt-0.5 block">{formatCurrency(amount)}</span>
+                  <span className="text-sm font-black font-mono-num text-stone-900 mt-0.5 block">{formatCurrency(amount)}</span>
                   <span className="text-[10px] text-stone-400 font-semibold">
                     {totalExpensesAmount > 0 ? ((amount / totalExpensesAmount) * 100).toFixed(0) : 0}% dos custos
                   </span>
@@ -368,7 +352,7 @@ export const ReportView: React.FC = () => {
         {/* Full Sales Table of the Month */}
         <div className="space-y-3">
           <h3 className="text-base font-black text-stone-900 flex items-center gap-1.5 border-b border-stone-200 pb-2">
-            <ShoppingBag className="w-4 h-4 text-orange-500" />
+            <ShoppingBag className="w-4 h-4 text-emerald-700" />
             Extrato Detalhado de Vendas ({monthSales.length} pedidos)
           </h3>
 
@@ -392,7 +376,7 @@ export const ReportView: React.FC = () => {
                   {monthSales.map((s) => (
                     <tr key={s.id} className="hover:bg-stone-50/50">
                       <td className="p-2.5 font-bold text-stone-800 whitespace-nowrap">
-                        {s.date.slice(8, 10)}/{s.date.slice(5, 7)} {isSundayDate(s.date) ? '🔥' : ''}
+                        {s.date.slice(8, 10)}/{s.date.slice(5, 7)} {isSundayDate(s.date) ? '(Dom)' : ''}
                       </td>
                       <td className="p-2.5 font-semibold text-stone-900 whitespace-nowrap">{s.customerName}</td>
                       <td className="p-2.5 text-stone-600 max-w-xs truncate">
@@ -412,8 +396,8 @@ export const ReportView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-2.5 text-stone-600 uppercase font-semibold">{s.paymentMethod}</td>
-                      <td className="p-2.5 text-right font-black text-stone-900">{formatCurrency(s.totalAmount)}</td>
-                      <td className="p-2.5 text-right font-bold text-emerald-700">{formatCurrency(s.amountPaid)}</td>
+                      <td className="p-2.5 text-right font-black font-mono-num text-stone-900">{formatCurrency(s.totalAmount)}</td>
+                      <td className="p-2.5 text-right font-bold font-mono-num text-emerald-700">{formatCurrency(s.amountPaid)}</td>
                     </tr>
                   ))}
                 </tbody>

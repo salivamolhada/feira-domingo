@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Flame,
+  TreePine,
   TrendingUp,
   Calendar as CalendarIcon,
   ShoppingBag,
@@ -15,7 +15,6 @@ import {
   RefreshCw,
   Settings,
   UtensilsCrossed,
-  Zap,
   AlertCircle,
   X,
   Copy,
@@ -30,7 +29,16 @@ interface NavbarProps {
   onOpenSaleModal: () => void;
   onOpenExpenseModal: () => void;
   onOpenSettings: () => void;
+  showChristmas: boolean;
+  onToggleChristmas: () => void;
 }
+
+const STRING_BULBS = [
+  '#ef4444', '#fbbf24', '#34d399', '#38bdf8',
+  '#ef4444', '#fbbf24', '#34d399', '#38bdf8',
+  '#ef4444', '#fbbf24', '#34d399', '#38bdf8',
+  '#ef4444', '#fbbf24', '#34d399', '#38bdf8',
+];
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
@@ -38,9 +46,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSaleModal,
   onOpenExpenseModal,
   onOpenSettings,
+  showChristmas,
+  onToggleChristmas,
 }) => {
-  const { user, loginWithGoogle, logout, resetToDemoData, businessName, authError, clearAuthError } = useData();
+  const { user, loginWithGoogle, logout, businessName, authError, clearAuthError } = useData();
   const [isConnecting, setIsConnecting] = React.useState(false);
+  const [copiedDomain, setCopiedDomain] = React.useState(false);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -53,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navItems = [
     { id: 'dashboard', label: 'Painel de Lucros', icon: TrendingUp },
-    { id: 'calendario', label: 'Calendário de Vendas', icon: CalendarIcon, badge: '⭐' },
+    { id: 'calendario', label: 'Calendário de Vendas', icon: CalendarIcon },
     { id: 'vendas', label: 'Pedidos & Vendas', icon: ShoppingBag },
     { id: 'despesas', label: 'Despesas & Carnes', icon: Receipt },
     { id: 'produtos', label: 'Cardápio & Espetos', icon: UtensilsCrossed },
@@ -62,68 +73,90 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-stone-900/95 backdrop-blur-md border-b border-stone-800 shadow-lg print:hidden text-white">
+    <header className="sticky top-0 z-40 bg-emerald-950/92 backdrop-blur-md border-b border-emerald-800/80 shadow-xl print:hidden text-white">
+      {/* Unclipped Christmas String Lights Trim (Pisca-Pisca) */}
+      {showChristmas && (
+        <div
+          className="h-4 w-full bg-emerald-950 border-b border-emerald-900/90 flex items-center justify-around px-4 overflow-hidden"
+          aria-hidden="true"
+        >
+          {STRING_BULBS.map((color, idx) => (
+            <span
+              key={idx}
+              className="w-2 h-2 rounded-full animate-bulb shrink-0"
+              style={{
+                backgroundColor: color,
+                animationDelay: `${(idx % 5) * 0.28}s`,
+                boxShadow: `0 0 8px ${color}`,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Top Header Row */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20 gap-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex flex-wrap items-center justify-between py-2.5 sm:py-3 gap-x-3 gap-y-2">
           {/* Logo & Brand */}
           <div
             onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-3 cursor-pointer select-none group"
+            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none group min-w-0"
           >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-orange-600 via-amber-500 to-red-500 text-white flex items-center justify-center shadow-lg shadow-orange-950/60 group-hover:scale-105 transition-transform">
-              <Flame className="w-6 h-6 animate-pulse" />
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 text-white flex items-center justify-center shadow-lg shadow-red-950/70 border border-amber-300/40 group-hover:scale-105 transition-transform shrink-0">
+              <TreePine className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  Espeto<span className="text-orange-500">&</span>Brasa
+                <span className="text-base sm:text-xl font-black text-white tracking-tight whitespace-nowrap">
+                  Espeto<span className="text-amber-400">&</span>Brasa
                 </span>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-orange-950/80 text-orange-300 border border-orange-500/40">
-                  DOMINGOS
+                <span className="hidden md:inline-block text-[10px] font-black px-2 py-0.5 rounded-md bg-red-900/85 text-amber-200 border border-amber-400/40 whitespace-nowrap">
+                  NATAL & DOMINGOS
                 </span>
               </div>
-              <p className="text-[11px] font-medium text-stone-400 -mt-0.5 hidden sm:block truncate max-w-[260px]">
+              <p className="text-[11px] font-medium text-emerald-200/80 -mt-0.5 hidden lg:block truncate max-w-[260px]">
                 {businessName || 'Espetinhos, Salgados & Bebidas Geladas'}
               </p>
             </div>
           </div>
 
           {/* Action Buttons & Auth */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
+            {/* Christmas Scene Toggle */}
+            <button
+              type="button"
+              onClick={onToggleChristmas}
+              className={`p-2 rounded-xl text-xs transition-colors flex items-center gap-1.5 border whitespace-nowrap shrink-0 ${
+                showChristmas
+                  ? 'bg-emerald-900/90 text-amber-300 border-amber-400/40 hover:bg-emerald-800'
+                  : 'bg-emerald-950 text-emerald-300 border-emerald-800 hover:bg-emerald-900'
+              }`}
+              title={showChristmas ? 'Ocultar animações de Natal' : 'Ativar animações de Natal'}
+            >
+              <Sparkles className="w-4 h-4 shrink-0" />
+              <span className="hidden xl:inline font-bold">
+                {showChristmas ? 'Natal Ativo' : 'Ativar Natal'}
+              </span>
+            </button>
+
             {/* Settings button */}
             <button
               type="button"
               onClick={onOpenSettings}
-              className="p-2 text-stone-300 hover:text-white hover:bg-stone-800 rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-stone-800"
-              title="Configurar nome do negócio e chave Pix"
+              className="p-2 text-emerald-100 hover:text-white hover:bg-emerald-900 rounded-xl text-xs transition-colors flex items-center gap-1.5 border border-emerald-800/80 whitespace-nowrap shrink-0"
+              title="Configurar nome do negócio, chave Pix e exemplos"
             >
-              <Settings className="w-4 h-4 text-stone-400" />
-              <span className="hidden md:inline font-bold">Ajustes & Pix</span>
-            </button>
-
-            {/* Quick Demo Data Reset */}
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Deseja recarregar os dados de exemplo de espetinhos, energéticos, salgados, clientes e vendas de domingo?')) {
-                  resetToDemoData();
-                }
-              }}
-              className="p-2 text-stone-400 hover:text-stone-200 hover:bg-stone-800 rounded-xl text-xs transition-colors hidden md:flex items-center gap-1"
-              title="Carregar dados de demonstração de espetinhos e bebidas"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Exemplos</span>
+              <Settings className="w-4 h-4 text-amber-300 shrink-0" />
+              <span className="hidden lg:inline font-bold">Ajustes & Pix</span>
             </button>
 
             {/* Nova Despesa button */}
             <button
               type="button"
               onClick={onOpenExpenseModal}
-              className="px-3 py-2 text-stone-300 hover:text-orange-400 hover:bg-stone-800 rounded-xl text-xs font-bold transition-colors hidden sm:flex items-center gap-1.5 border border-stone-800"
+              className="px-2.5 sm:px-3 py-2 text-emerald-100 hover:text-amber-300 hover:bg-emerald-900 rounded-xl text-xs font-bold transition-colors hidden sm:flex items-center gap-1.5 border border-emerald-800/80 whitespace-nowrap shrink-0"
             >
-              <Plus className="w-3.5 h-3.5 text-orange-400" />
+              <Plus className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <span>Despesa</span>
             </button>
 
@@ -131,20 +164,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onOpenSaleModal}
-              className="px-3.5 sm:px-4 py-2 sm:py-2.5 bg-gradient-to-r from-orange-500 via-amber-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-stone-950 rounded-xl text-xs font-black shadow-md shadow-orange-950 hover:shadow-orange-900/50 hover:text-white transition-all flex items-center gap-1.5"
+              className="px-3 sm:px-4 py-2 bg-gradient-to-r from-red-600 via-red-500 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white rounded-xl text-xs font-black shadow-md shadow-red-950/60 border border-amber-300/30 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span>Lançar Venda</span>
             </button>
 
             {/* Auth / Cloud Sync Status */}
             {user ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-stone-800">
-                <div className="text-right hidden sm:block">
-                  <span className="text-xs font-extrabold text-stone-200 block truncate max-w-[120px]">
+              <div className="flex items-center gap-2 pl-2 border-l border-emerald-800 shrink-0">
+                <div className="text-right hidden md:block">
+                  <span className="text-xs font-extrabold text-white block truncate max-w-[120px]">
                     {user.displayName || user.email?.split('@')[0]}
                   </span>
-                  <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5 justify-end">
+                  <span className="text-[10px] font-bold text-emerald-300 flex items-center gap-0.5 justify-end">
                     <Cloud className="w-2.5 h-2.5" /> Nuvem ativa
                   </span>
                 </div>
@@ -152,17 +185,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <img
                     src={user.photoURL}
                     alt="Perfil"
-                    className="w-8 h-8 rounded-full border border-orange-500/50"
+                    className="w-8 h-8 rounded-full border border-amber-400/60"
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-orange-600 text-white font-bold flex items-center justify-center text-xs">
+                  <div className="w-8 h-8 rounded-full bg-red-600 text-white font-bold flex items-center justify-center text-xs">
                     {user.email?.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <button
                   type="button"
                   onClick={logout}
-                  className="p-1.5 text-stone-400 hover:text-stone-200 rounded-lg transition-colors"
+                  className="p-1.5 text-emerald-200 hover:text-white rounded-lg transition-colors"
                   title="Sair da conta"
                 >
                   <LogOut className="w-4 h-4" />
@@ -173,18 +206,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={handleConnect}
                 disabled={isConnecting}
-                className="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-500 disabled:opacity-60 text-stone-950 font-black rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+                className="px-2.5 sm:px-3 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-stone-950 font-black rounded-xl text-xs transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap shrink-0"
                 title="Fazer login com Google para sincronizar com o banco de dados na nuvem"
               >
                 {isConnecting ? (
                   <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-stone-950" />
-                    <span className="hidden sm:inline">Conectando...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-stone-950 shrink-0" />
+                    <span className="hidden md:inline">Conectando...</span>
                   </>
                 ) : (
                   <>
-                    <CloudOff className="w-3.5 h-3.5 text-stone-950" />
-                    <span className="hidden sm:inline">Conectar Nuvem</span>
+                    <CloudOff className="w-3.5 h-3.5 text-stone-950 shrink-0" />
+                    <span className="hidden md:inline">Conectar Nuvem</span>
                   </>
                 )}
               </button>
@@ -194,56 +227,57 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Auth Error Notification Banner if login failed */}
         {authError && (
-          <div className="mx-2 mb-3 p-4 bg-stone-900 border border-orange-500/50 rounded-2xl text-xs text-stone-200 shadow-xl space-y-2.5">
+          <div className="mb-2.5 p-3.5 bg-emerald-950 border border-red-400/60 rounded-2xl text-xs text-emerald-50 shadow-xl space-y-2 max-h-56 overflow-y-auto">
             {authError.startsWith('DOMINIO_NAO_AUTORIZADO:') ? (
               (() => {
                 const domain = authError.replace('DOMINIO_NAO_AUTORIZADO:', '');
                 return (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2 text-orange-400 font-bold text-sm">
-                        <AlertCircle className="w-5 h-5 text-orange-400 shrink-0" />
+                      <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
+                        <AlertCircle className="w-5 h-5 text-amber-300 shrink-0" />
                         <span>Autorizar Domínio no Firebase Authentication</span>
                       </div>
                       <button
                         type="button"
                         onClick={clearAuthError}
-                        className="p-1 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
+                        className="p-1 text-emerald-200 hover:text-white rounded-lg hover:bg-emerald-900"
                         title="Fechar aviso"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <p className="text-stone-300 leading-relaxed">
+                    <p className="text-emerald-100 leading-relaxed">
                       O Firebase bloqueia o login do Google quando a URL atual ainda não foi adicionada à lista de domínios autorizados do seu projeto <strong className="text-white">gen-lang-client-0233520699</strong>.
                     </p>
 
-                    <div className="p-3 bg-stone-950/80 rounded-xl border border-stone-800 space-y-2">
+                    <div className="p-3 bg-black/30 rounded-xl border border-emerald-800 space-y-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-[11px] text-stone-400 font-medium">Domínio atual a ser autorizado:</span>
-                        <div className="flex items-center gap-1.5 bg-stone-900 px-2.5 py-1 rounded-lg border border-stone-700">
-                          <code className="text-orange-300 font-mono font-bold select-all">{domain}</code>
+                        <span className="text-[11px] text-emerald-200 font-medium">Domínio atual a ser autorizado:</span>
+                        <div className="flex items-center gap-1.5 bg-emerald-950 px-2.5 py-1 rounded-lg border border-emerald-700 max-w-full overflow-hidden">
+                          <code className="text-amber-300 font-mono font-bold select-all truncate">{domain}</code>
                           <button
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText(domain);
-                              alert('Domínio copiado para a área de transferência!');
+                              setCopiedDomain(true);
+                              setTimeout(() => setCopiedDomain(false), 2500);
                             }}
-                            className="p-1 text-stone-300 hover:text-white transition-colors"
+                            className="p-1 text-emerald-200 hover:text-white transition-colors shrink-0"
                             title="Copiar domínio"
                           >
-                            <Copy className="w-3.5 h-3.5" />
+                            {copiedDomain ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                           </button>
                         </div>
                       </div>
 
-                      <div className="text-[11px] text-stone-400 space-y-1 pt-1">
-                        <p className="font-bold text-stone-200">Como liberar em 3 passos simples:</p>
-                        <ol className="list-decimal list-inside space-y-1 pl-1 text-stone-300">
+                      <div className="text-[11px] text-emerald-200 space-y-1 pt-1">
+                        <p className="font-bold text-white">Como liberar em 3 passos simples:</p>
+                        <ol className="list-decimal list-inside space-y-1 pl-1 text-emerald-100">
                           <li>Abra o Console do Firebase no seu projeto.</li>
                           <li>Vá em <strong>Authentication</strong> → aba <strong>Settings (Configurações)</strong> → <strong>Authorized domains (Domínios autorizados)</strong>.</li>
-                          <li>Clique em <strong>Add domain (Adicionar domínio)</strong>, cole <code className="text-orange-300 px-1 bg-stone-900 rounded">{domain}</code> e salve!</li>
+                          <li>Clique em <strong>Add domain (Adicionar domínio)</strong>, cole <code className="text-amber-300 px-1 bg-emerald-950 rounded">{domain}</code> e salve!</li>
                         </ol>
                       </div>
                     </div>
@@ -253,13 +287,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         href="https://console.firebase.google.com/project/gen-lang-client-0233520699/authentication/settings"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-stone-950 font-black rounded-xl text-xs transition-colors shadow-sm"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-black rounded-xl text-xs transition-colors shadow-sm"
                       >
                         <span>Abrir Configurações no Firebase Console</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
-                      <span className="text-[11px] text-emerald-400 font-semibold">
-                        💡 Seus dados continuam salvos no navegador normalmente!
+                      <span className="text-[11px] text-emerald-300 font-semibold">
+                        Seus dados continuam salvos no navegador normalmente!
                       </span>
                     </div>
                   </div>
@@ -268,13 +302,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-amber-300 shrink-0" />
                   <span>{authError}</span>
                 </div>
                 <button
                   type="button"
                   onClick={clearAuthError}
-                  className="p-1 text-stone-400 hover:text-white rounded-lg hover:bg-stone-800"
+                  className="p-1 text-emerald-200 hover:text-white rounded-lg hover:bg-emerald-900"
                   title="Fechar aviso"
                 >
                   <X className="w-4 h-4" />
@@ -284,8 +318,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         )}
 
-        {/* Tab Navigation Row */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2.5 border-t border-stone-800/80">
+        {/* Tab Navigation Row - wraps cleanly instead of clipping or crowding */}
+        <nav
+          aria-label="Navegação principal"
+          className="flex flex-wrap items-center gap-1 sm:gap-1.5 py-2 border-t border-emerald-800/70"
+        >
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -295,27 +332,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 key={item.id}
                 type="button"
                 onClick={() => setActiveTab(item.id)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all shrink-0 flex items-center gap-1.5 ${
+                className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black transition-all whitespace-nowrap flex items-center gap-1.5 ${
                   isActive
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-stone-950 shadow-md font-black'
-                    : 'text-stone-300 hover:text-white hover:bg-stone-800/90'
+                    ? 'bg-gradient-to-r from-red-600 to-amber-500 text-white shadow-md border border-amber-300/40'
+                    : 'text-emerald-100/85 hover:text-white hover:bg-emerald-900/90'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-stone-950' : 'text-stone-400'}`} />
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-amber-200' : 'text-emerald-300'}`} />
                 <span>{item.label}</span>
-                {item.badge && (
-                  <span
-                    className={`text-[10px] px-1 rounded font-black ${
-                      isActive ? 'bg-black/20 text-stone-950' : 'bg-orange-950 text-orange-300 border border-orange-500/30'
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
               </button>
             );
           })}
-        </div>
+        </nav>
       </div>
     </header>
   );

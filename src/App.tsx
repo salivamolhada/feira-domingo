@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { DataProvider } from './context/DataContext';
 import { Navbar } from './components/Navbar';
+import { ChristmasScene, ChristmasSkyStage } from './components/ChristmasScene';
 import { SaleModal } from './components/SaleModal';
 import { ExpenseModal } from './components/ExpenseModal';
 import { ProductModal } from './components/ProductModal';
@@ -20,6 +21,7 @@ import { Plus } from 'lucide-react';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [showChristmas, setShowChristmas] = useState<boolean>(true);
 
   // Modal States
   const [isSaleModalOpen, setIsSaleModalOpen] = useState<boolean>(false);
@@ -81,7 +83,10 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fcfbfa] text-stone-900 font-sans flex flex-col selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen relative bg-[#071913] print:bg-white text-stone-900 font-sans flex flex-col selection:bg-red-600 selection:text-white">
+      {/* Animated Christmas Background Scene */}
+      <ChristmasScene enabled={showChristmas} />
+
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -89,10 +94,15 @@ function AppContent() {
         onOpenSaleModal={() => handleOpenNewSale()}
         onOpenExpenseModal={handleOpenNewExpense}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        showChristmas={showChristmas}
+        onToggleChristmas={() => setShowChristmas((prev) => !prev)}
       />
 
+      {/* Dedicated Unobstructed Sky Stage for Flying Santa, Reindeer & Dropping Presents */}
+      <ChristmasSkyStage enabled={showChristmas} />
+
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+      <main className={`relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pb-36 sm:pb-44 print:pt-4 print:pb-4 ${showChristmas ? 'pt-2 sm:pt-3' : 'pt-6'}`}>
         {activeTab === 'dashboard' && (
           <DashboardView
             onOpenSaleModal={() => handleOpenNewSale()}
@@ -144,7 +154,7 @@ function AppContent() {
         <button
           type="button"
           onClick={() => handleOpenNewSale()}
-          className="w-14 h-14 rounded-full bg-gradient-to-tr from-orange-600 via-amber-500 to-red-500 text-stone-950 shadow-xl shadow-orange-950/40 flex items-center justify-center active:scale-95 transition-transform"
+          className="w-14 h-14 rounded-full bg-gradient-to-tr from-red-700 via-red-600 to-amber-500 text-white shadow-xl shadow-red-950/60 border border-amber-300/60 flex items-center justify-center active:scale-95 transition-transform"
           title="Novo Lançamento de Venda"
         >
           <Plus className="w-7 h-7" />

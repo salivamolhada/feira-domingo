@@ -14,18 +14,14 @@ import {
   DollarSign,
   Calendar as CalendarIcon,
   MessageCircle,
-  Search,
-  Check,
-  ChevronDown,
-  Percent,
-  Truck
+  Check
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Sale, SaleItem, PaymentStatus, PaymentMethod, OrderStatus } from '../types';
 import { useData } from '../context/DataContext';
 import { CalendarPicker } from './CalendarPicker';
 import { formatCurrency, formatToDateInput, isSundayDate } from '../utils/dateUtils';
-import { formatPhoneBR, cleanPhoneDigits, getWhatsAppUrl, isValidBRPhone } from '../utils/phoneUtils';
+import { formatPhoneBR, getWhatsAppUrl, isValidBRPhone } from '../utils/phoneUtils';
 
 interface SaleModalProps {
   isOpen: boolean;
@@ -40,7 +36,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   saleToEdit,
   defaultDate
 }) => {
-  const { products, customers, saveSale, sales, businessName, pixKey } = useData();
+  const { products, customers, saveSale, sales, businessName } = useData();
 
   const [date, setDate] = useState<string>(
     saleToEdit?.date || defaultDate || formatToDateInput(new Date())
@@ -49,7 +45,6 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   const [customerPhone, setCustomerPhone] = useState<string>(saleToEdit?.customerPhone || '');
   const [customerId, setCustomerId] = useState<string | undefined>(saleToEdit?.customerId);
 
-  // Customer autocomplete dropdown state
   const [showCustomerDropdown, setShowCustomerDropdown] = useState<boolean>(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +52,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     saleToEdit?.items || []
   );
 
-  // Custom sweet item state
+  // Custom unlisted item state
   const [showCustomItemForm, setShowCustomItemForm] = useState<boolean>(false);
   const [customItemName, setCustomItemName] = useState<string>('');
   const [customItemPrice, setCustomItemPrice] = useState<string>('');
@@ -86,8 +81,8 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
-  // Initialize or reset state when modal opens or edits
   useEffect(() => {
     if (saleToEdit) {
       setDate(saleToEdit.date);
@@ -122,9 +117,9 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     }
     setShowCustomerDropdown(false);
     setShowCustomItemForm(false);
+    setFormError(null);
   }, [saleToEdit, defaultDate, isOpen]);
 
-  // Close customer dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (customerDropdownRef.current && !customerDropdownRef.current.contains(e.target as Node)) {
@@ -135,7 +130,6 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Filter existing customers matching input
   const matchingCustomers = React.useMemo(() => {
     if (!customerName.trim()) return customers.slice(0, 5);
     const term = customerName.toLowerCase().trim();
@@ -146,18 +140,14 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     );
   }, [customers, customerName]);
 
-  // Handle phone change with automatic formatting mask
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    const formatted = formatPhoneBR(rawValue);
+    const formatted = formatPhoneBR(e.target.value);
     setCustomerPhone(formatted);
   };
 
-  // Calculate items subtotal
   const itemsSubtotal = items.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
   const totalAmount = Math.max(0, itemsSubtotal + Number(deliveryFee || 0) - Number(discount || 0));
 
-  // Sync amountPaid when payment status changes
   const handlePaymentStatusChange = (status: PaymentStatus) => {
     setPaymentStatus(status);
     if (status === 'pago') {
@@ -171,25 +161,27 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     }
   };
 
-  // Update amountPaid if total changes while 'pago' is active
   useEffect(() => {
     if (paymentStatus === 'pago') {
       setAmountPaid(totalAmount);
     }
   }, [totalAmount, paymentStatus]);
 
-  // Add product from catalog
   const handleAddProduct = () => {
     if (!selectedProductId) return;
     const prod = products.find((p) => p.id === selectedProductId);
     if (!prod) return;
 
+    setFormError(null);
     const existingIndex = items.findIndex((i) => i.productId === prod.id);
     if (existingIndex >= 0) {
       const updated = [...items];
       const newQty = updated[existingIndex].quantity + 1;
-      updated[existingIndex].quantity = newQty;
-      updated[existingIndex].totalPrice = newQty * updated[existingIndex].unitPrice;
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        quantity: newQty,
+        totalPrice: newQty * updated[existingIndex].unitPrice,
+      };
       setItems(updated);
     } else {
       const newItem: SaleItem = {
@@ -205,24 +197,25 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     setSelectedProductId('');
   };
 
-  // Add custom unlisted sweet item
   const handleAddCustomItem = () => {
     if (!customItemName.trim()) {
-      alert('Informe o nome do doce personalizado.');
+      setFormError('Informe o nome do item personalizado (ex: Combo Espetinhos + Refrigerante).');
       return;
     }
     const priceNum = parseFloat(customItemPrice.replace(',', '.'));
     if (isNaN(priceNum) || priceNum <= 0) {
-      alert('Informe um valor válido.');
+      setFormError('Informe um valor unitário válido maior que zero.');
       return;
     }
 
+    setFormError(null);
+    const qty = Math.max(1, customItemQty || 1);
     const newItem: SaleItem = {
       id: `custom-item-${Date.now()}`,
       name: customItemName.trim(),
-      quantity: Math.max(1, customItemQty),
+      quantity: qty,
       unitPrice: priceNum,
-      totalPrice: Math.max(1, customItemQty) * priceNum,
+      totalPrice: qty * priceNum,
     };
 
     setItems([...items, newItem]);
@@ -238,8 +231,11 @@ export const SaleModal: React.FC<SaleModalProps> = ({
       return;
     }
     const updated = [...items];
-    updated[index].quantity = newQty;
-    updated[index].totalPrice = newQty * updated[index].unitPrice;
+    updated[index] = {
+      ...updated[index],
+      quantity: newQty,
+      totalPrice: newQty * updated[index].unitPrice,
+    };
     setItems(updated);
   };
 
@@ -247,7 +243,6 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  // Select customer from dropdown or recent tags
   const handleSelectCustomer = (cust: typeof customers[0]) => {
     setCustomerId(cust.id);
     setCustomerName(cust.name);
@@ -258,22 +253,23 @@ export const SaleModal: React.FC<SaleModalProps> = ({
     setShowCustomerDropdown(false);
   };
 
-  // Test WhatsApp message to customer
   const handleTestWhatsApp = () => {
     if (!customerPhone) return;
-    const msg = `Olá ${customerName || 'querido(a) cliente'}! Tudo bem? Aqui é da ${businessName || 'confeitaria'} 🧁✨`;
+    const msg = `Olá ${customerName || 'cliente'}! Tudo bem? Aqui é do ${businessName || 'Espeto & Brasa'} 🎄🍢`;
     const url = getWhatsAppUrl(customerPhone, msg);
-    if (url) window.open(url, '_blank');
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     if (!customerName.trim()) {
-      alert('Por favor, informe o nome do cliente.');
+      setFormError('Por favor, informe o nome do cliente.');
       return;
     }
     if (items.length === 0) {
-      alert('Adicione pelo menos um doce ao pedido.');
+      setFormError('Adicione pelo menos um espetinho, salgado ou bebida ao pedido.');
       return;
     }
 
@@ -305,14 +301,14 @@ export const SaleModal: React.FC<SaleModalProps> = ({
           particleCount: 55,
           spread: 65,
           origin: { y: 0.7 },
-          colors: ['#f43f5e', '#fbbf24', '#ec4899', '#10b981'],
+          colors: ['#dc2626', '#fbbf24', '#059669', '#ffffff'],
         });
       }
 
       onClose();
     } catch (err) {
       console.error('Error saving sale:', err);
-      alert('Ocorreu um erro ao salvar o lançamento.');
+      setFormError('Ocorreu um erro ao salvar o lançamento. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -325,12 +321,12 @@ export const SaleModal: React.FC<SaleModalProps> = ({
   const isPhoneValid = isValidBRPhone(customerPhone);
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-rose-100 max-w-2xl w-full max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-emerald-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 max-w-2xl w-full max-h-[94vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between bg-gradient-to-r from-rose-50/80 via-amber-50/60 to-pink-50/80">
+        <div className="px-5 py-4 border-b border-red-100 flex items-center justify-between bg-gradient-to-r from-red-50 via-amber-50/70 to-emerald-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 text-white flex items-center justify-center shadow-md shadow-rose-200">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-amber-500 text-white flex items-center justify-center shadow-md shadow-red-200">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
@@ -338,7 +334,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 {saleToEdit ? 'Editar Pedido / Venda' : 'Novo Lançamento de Venda'}
               </h2>
               <p className="text-xs text-stone-500 font-medium">
-                Controle datas no calendário, doces, pagamentos e WhatsApp do cliente
+                Escolha o dia no calendário, adicione espetinhos ou bebidas e registre o pagamento
               </p>
             </div>
           </div>
@@ -353,11 +349,18 @@ export const SaleModal: React.FC<SaleModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-5 flex-1">
+          {formError && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           {/* SECTION 1: CALENDAR & DATE PICKER */}
-          <div className="bg-gradient-to-br from-amber-50/70 to-rose-50/50 rounded-2xl p-4 border border-amber-200/90 shadow-2xs">
+          <div className="bg-gradient-to-br from-emerald-50/80 to-amber-50/60 rounded-2xl p-4 border border-emerald-200 shadow-2xs">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-amber-600" />
+                <CalendarIcon className="w-5 h-5 text-red-600" />
                 <span className="font-extrabold text-sm text-stone-900">
                   Data do Lançamento no Calendário
                 </span>
@@ -365,18 +368,17 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               <button
                 type="button"
                 onClick={() => setShowCalendar(!showCalendar)}
-                className="text-xs font-bold text-rose-600 hover:text-rose-700 underline flex items-center gap-1"
+                className="text-xs font-bold text-red-600 hover:text-red-700 underline flex items-center gap-1"
               >
-                {showCalendar ? 'Ocultar Calendário' : '📅 Abrir Calendário'}
+                {showCalendar ? 'Ocultar Calendário' : 'Abrir Calendário'}
               </button>
             </div>
 
-            {/* Sunday Highlight Badge */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-amber-200">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-emerald-200">
               <div className="flex items-center gap-2">
                 {isSunday ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-amber-500 text-white shadow-xs tracking-wide">
-                    <Sparkles className="w-3.5 h-3.5" />
+                  <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-red-600 text-white shadow-xs tracking-wide">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
                     DOMINGO DE VENDAS
                   </span>
                 ) : (
@@ -384,7 +386,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                     Dia útil / Semana
                   </span>
                 )}
-                <span className="text-sm font-black text-stone-800">
+                <span className="text-sm font-black font-mono-num text-stone-800">
                   {date.slice(8, 10)}/{date.slice(5, 7)}/{date.slice(0, 4)}
                 </span>
               </div>
@@ -393,11 +395,10 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="text-xs font-extrabold px-2.5 py-1 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="text-xs font-extrabold px-2.5 py-1 bg-stone-50 border border-stone-200 rounded-lg text-stone-800 focus:outline-none focus:ring-1 focus:ring-emerald-600"
               />
             </div>
 
-            {/* Embedded Calendar Picker */}
             {showCalendar && (
               <div className="mt-3">
                 <CalendarPicker
@@ -413,11 +414,11 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             )}
           </div>
 
-          {/* SECTION 2: CUSTOMER & TELEFONE / WHATSAPP (FIXED & ENHANCED) */}
+          {/* SECTION 2: CUSTOMER & TELEFONE / WHATSAPP */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-extrabold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
-                <User className="w-4 h-4 text-rose-500" />
+                <User className="w-4 h-4 text-red-600" />
                 Cliente & Contato
               </label>
               {customerId && (
@@ -428,22 +429,21 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Customer Name with Autocomplete Dropdown */}
+              {/* Customer Name with Autocomplete */}
               <div className="relative" ref={customerDropdownRef}>
                 <div className="relative">
                   <input
                     type="text"
                     required
-                    placeholder="Nome do cliente (ex: Mariana Silva)"
+                    placeholder="Nome do cliente (ex: Marcos Vinícius)"
                     value={customerName}
                     onFocus={() => setShowCustomerDropdown(true)}
                     onChange={(e) => {
                       setCustomerName(e.target.value);
                       setShowCustomerDropdown(true);
-                      // If user clears, detach id
                       if (!e.target.value.trim()) setCustomerId(undefined);
                     }}
-                    className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100 transition-all pr-8"
+                    className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 transition-all pr-8"
                   />
                   {customerName && (
                     <button
@@ -460,21 +460,29 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                   )}
                 </div>
 
-                {/* Autocomplete suggestions */}
                 {showCustomerDropdown && matchingCustomers.length > 0 && (
-                  <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-rose-200 rounded-2xl shadow-xl max-h-48 overflow-y-auto p-1.5 space-y-1">
-                    <span className="text-[10px] uppercase font-bold text-stone-400 px-2 py-1 block">
-                      Clientes Cadastrados:
-                    </span>
+                  <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-emerald-200 rounded-2xl shadow-xl max-h-48 overflow-y-auto p-1.5 space-y-1">
+                    <div className="flex items-center justify-between px-2 py-1">
+                      <span className="text-[10px] uppercase font-bold text-stone-400">
+                        Clientes Cadastrados:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomerDropdown(false)}
+                        className="text-[10px] font-bold text-stone-400 hover:text-stone-700"
+                      >
+                        Fechar
+                      </button>
+                    </div>
                     {matchingCustomers.map((c) => (
                       <button
                         key={c.id}
                         type="button"
                         onClick={() => handleSelectCustomer(c)}
-                        className="w-full text-left p-2 rounded-xl hover:bg-rose-50 flex items-center justify-between text-xs transition-colors group"
+                        className="w-full text-left p-2 rounded-xl hover:bg-emerald-50 flex items-center justify-between text-xs transition-colors group"
                       >
                         <div>
-                          <p className="font-bold text-stone-800 group-hover:text-rose-700">
+                          <p className="font-bold text-stone-800 group-hover:text-emerald-800">
                             {c.name}
                           </p>
                           {c.phone && (
@@ -493,8 +501,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                   </div>
                 )}
 
-                {/* Quick tags for most recent customers */}
-                {customers.length > 0 && (
+                {customers.length > 0 && !showCustomerDropdown && (
                   <div className="mt-1.5 flex items-center gap-1 text-xs text-stone-500 overflow-x-auto py-0.5 no-scrollbar">
                     <span className="shrink-0 text-[10px] font-bold text-stone-400">
                       Recentes:
@@ -506,8 +513,8 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                         onClick={() => handleSelectCustomer(c)}
                         className={`shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-semibold transition-all ${
                           customerName === c.name
-                            ? 'bg-rose-500 text-white'
-                            : 'bg-stone-100 hover:bg-rose-50 hover:text-rose-700 text-stone-700'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-stone-100 hover:bg-emerald-50 hover:text-emerald-800 text-stone-700'
                         }`}
                       >
                         {c.name.split(' ')[0]}
@@ -517,41 +524,38 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 )}
               </div>
 
-              {/* TELEFONE COM MÁSCARA AUTOMÁTICA E VALIDAÇÃO WHATSAPP */}
+              {/* Telefone com máscara automática */}
               <div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
-                    <Phone className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    placeholder="(00) 00000-0000"
-                    value={customerPhone}
-                    onChange={handlePhoneChange}
-                    maxLength={15}
-                    className={`w-full text-sm font-bold pl-9 pr-24 py-2.5 bg-white border rounded-xl transition-all ${
-                      isPhoneValid
-                        ? 'border-emerald-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-stone-900'
-                        : 'border-stone-200 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 text-stone-900'
-                    }`}
-                  />
-
-                  {/* Direct WhatsApp Action in Input */}
-                  {customerPhone && (
-                    <div className="absolute inset-y-0 right-1.5 flex items-center gap-1">
-                      {isPhoneValid && (
-                        <button
-                          type="button"
-                          onClick={handleTestWhatsApp}
-                          className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black flex items-center gap-1 shadow-xs transition-transform active:scale-95"
-                          title="Abrir conversa no WhatsApp"
-                        >
-                          <MessageCircle className="w-3 h-3" />
-                          <span>WhatsApp</span>
-                        </button>
-                      )}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                      <Phone className="w-4 h-4" />
                     </div>
+                    <input
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="(00) 00000-0000"
+                      value={customerPhone}
+                      onChange={handlePhoneChange}
+                      maxLength={15}
+                      className={`w-full text-sm font-bold pl-9 pr-3 py-2.5 bg-white border rounded-xl transition-all ${
+                        isPhoneValid
+                          ? 'border-emerald-400 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 text-stone-900'
+                          : 'border-stone-200 focus:border-red-500 focus:ring-2 focus:ring-red-100 text-stone-900'
+                      }`}
+                    />
+                  </div>
+
+                  {customerPhone && isPhoneValid && (
+                    <button
+                      type="button"
+                      onClick={handleTestWhatsApp}
+                      className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 shadow-xs transition-transform active:scale-95 shrink-0"
+                      title="Abrir conversa no WhatsApp"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </button>
                   )}
                 </div>
 
@@ -563,7 +567,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                       </span>
                     ) : isPhoneValid ? (
                       <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                        <Check className="w-3 h-3" /> Número formatado para WhatsApp
+                        <Check className="w-3 h-3" /> Número pronto para WhatsApp
                       </span>
                     ) : (
                       'WhatsApp para envio de comprovante'
@@ -574,41 +578,40 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             </div>
           </div>
 
-          {/* SECTION 3: SWEET PRODUCTS / ITEMS */}
+          {/* SECTION 3: SKEWERS, SNACKS & DRINKS ITEMS */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <label className="text-xs font-extrabold text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-4 h-4 text-amber-500" />
-                Doces do Pedido
+                Itens do Pedido (Espetos, Salgados & Bebidas)
               </label>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setShowCustomItemForm(!showCustomItemForm)}
-                  className="text-xs font-bold text-rose-600 hover:text-rose-700 underline flex items-center gap-1"
+                  className="text-xs font-bold text-red-600 hover:text-red-700 underline flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  {showCustomItemForm ? 'Fechar Personalizado' : 'Doce fora do cardápio'}
+                  {showCustomItemForm ? 'Fechar Personalizado' : 'Item fora do cardápio'}
                 </button>
-                <span className="text-xs font-bold text-stone-700 bg-rose-50 px-2.5 py-1 rounded-lg">
+                <span className="text-xs font-bold font-mono-num text-stone-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
                   Subtotal: {formatCurrency(itemsSubtotal)}
                 </span>
               </div>
             </div>
 
-            {/* Custom Item Form */}
             {showCustomItemForm && (
-              <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-2xl space-y-2 animate-in fade-in duration-150">
-                <span className="text-xs font-extrabold text-rose-800 block">
-                  Adicionar Doce Personalizado / Especial
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-2">
+                <span className="text-xs font-extrabold text-emerald-900 block">
+                  Adicionar Item Avulso / Especial
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                   <input
                     type="text"
-                    placeholder="Nome do doce (ex: Bolo Vulcão Ninho 1kg)"
+                    placeholder="Nome do item (ex: Combo 5 Espetos + Coca 2L)"
                     value={customItemName}
                     onChange={(e) => setCustomItemName(e.target.value)}
-                    className="sm:col-span-6 text-xs font-medium px-3 py-2 bg-white border border-rose-200 rounded-xl"
+                    className="sm:col-span-5 text-xs font-medium px-3 py-2 bg-white border border-emerald-200 rounded-xl"
                   />
                   <input
                     type="number"
@@ -617,36 +620,34 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                     placeholder="Valor R$"
                     value={customItemPrice}
                     onChange={(e) => setCustomItemPrice(e.target.value)}
-                    className="sm:col-span-3 text-xs font-bold px-3 py-2 bg-white border border-rose-200 rounded-xl"
+                    className="sm:col-span-3 text-xs font-bold px-3 py-2 bg-white border border-emerald-200 rounded-xl"
                   />
-                  <div className="sm:col-span-3 flex items-center gap-1">
-                    <input
-                      type="number"
-                      min="1"
-                      value={customItemQty}
-                      onChange={(e) => setCustomItemQty(Number(e.target.value))}
-                      className="w-14 text-xs font-bold px-2 py-2 bg-white border border-rose-200 rounded-xl text-center"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomItem}
-                      className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-black shadow-xs"
-                    >
-                      Adicionar
-                    </button>
-                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={customItemQty}
+                    onChange={(e) => setCustomItemQty(Number(e.target.value))}
+                    className="sm:col-span-2 text-xs font-bold px-2 py-2 bg-white border border-emerald-200 rounded-xl text-center"
+                    title="Quantidade"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomItem}
+                    className="sm:col-span-2 py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black shadow-xs whitespace-nowrap"
+                  >
+                    Incluir
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Add Sweet Dropdown from Catalog */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 text-xs sm:text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+                className="flex-1 min-w-0 text-xs sm:text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               >
-                <option value="">Selecione um doce do cardápio...</option>
+                <option value="">Selecione um espetinho, salgado ou bebida...</option>
                 {products
                   .filter((p) => p.active)
                   .map((p) => (
@@ -659,21 +660,20 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 type="button"
                 onClick={handleAddProduct}
                 disabled={!selectedProductId}
-                className="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-black flex items-center gap-1.5 transition-colors shadow-xs"
+                className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-1.5 transition-colors shadow-xs shrink-0"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar
               </button>
             </div>
 
-            {/* Items List */}
             {items.length === 0 ? (
               <div className="text-center py-6 px-4 bg-stone-50 rounded-2xl border border-dashed border-stone-200">
                 <p className="text-xs sm:text-sm font-semibold text-stone-500">
-                  Nenhum doce adicionado a este pedido ainda.
+                  Nenhum item adicionado a este pedido ainda.
                 </p>
                 <p className="text-[11px] text-stone-400 mt-1">
-                  Selecione um doce do cardápio acima para calcular o valor automaticamente.
+                  Selecione um espeto, salgado ou bebida acima para calcular o valor automaticamente.
                 </p>
               </div>
             ) : (
@@ -687,17 +687,16 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                       <p className="text-xs sm:text-sm font-black text-stone-900 truncate">
                         {item.name}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5 text-xs">
+                      <div className="flex items-center gap-2 mt-0.5 text-xs font-mono-num">
                         <span className="text-stone-400">
                           Unit: {formatCurrency(item.unitPrice)}
                         </span>
-                        <span className="font-extrabold text-rose-600">
+                        <span className="font-extrabold text-emerald-700">
                           Total: {formatCurrency(item.totalPrice)}
                         </span>
                       </div>
                     </div>
 
-                    {/* Qty controls */}
                     <div className="flex items-center gap-2">
                       <div className="flex items-center border border-stone-200 rounded-lg bg-stone-50">
                         <button
@@ -707,7 +706,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                         >
                           -
                         </button>
-                        <span className="px-3 text-xs font-black text-stone-800">
+                        <span className="px-3 text-xs font-black font-mono-num text-stone-800">
                           {item.quantity}
                         </span>
                         <button
@@ -722,8 +721,8 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(index)}
-                        className="p-1.5 text-stone-400 hover:text-red-500 rounded-lg transition-colors"
-                        title="Remover doce"
+                        className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg transition-colors"
+                        title="Remover item"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -745,8 +744,8 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 onChange={(e) => setDeliveryType(e.target.value as 'retirada' | 'entrega')}
                 className="w-full text-xs font-bold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
               >
-                <option value="retirada">🛍️ Retirada no Balcão</option>
-                <option value="entrega">🛵 Entrega a Domicílio</option>
+                <option value="retirada">Retirada no Balcão</option>
+                <option value="entrega">Entrega a Domicílio</option>
               </select>
             </div>
 
@@ -760,7 +759,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 step="0.5"
                 value={deliveryFee}
                 onChange={(e) => setDeliveryFee(Number(e.target.value))}
-                className="w-full text-xs font-bold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
+                className="w-full text-xs font-bold font-mono-num px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
                 placeholder="0.00"
               />
             </div>
@@ -775,35 +774,34 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 step="0.5"
                 value={discount}
                 onChange={(e) => setDiscount(Number(e.target.value))}
-                className="w-full text-xs font-bold px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
+                className="w-full text-xs font-bold font-mono-num px-2.5 py-2 bg-white border border-stone-200 rounded-xl"
                 placeholder="0.00"
               />
             </div>
           </div>
 
           {/* SECTION 5: PAYMENT STATUS & METHOD */}
-          <div className="space-y-3 bg-gradient-to-br from-rose-50/60 to-amber-50/50 p-4 rounded-2xl border border-rose-200/80">
+          <div className="space-y-3 bg-gradient-to-br from-red-50/50 to-amber-50/50 p-4 rounded-2xl border border-red-200/70">
             <div className="flex items-center justify-between">
               <label className="text-xs font-black text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
-                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <DollarSign className="w-4 h-4 text-emerald-700" />
                 Status do Pagamento
               </label>
               <div className="text-right">
                 <span className="text-xs text-stone-500 font-medium">Valor Total:</span>
-                <span className="text-base sm:text-lg font-black text-stone-900 ml-1.5">
+                <span className="text-base sm:text-lg font-black font-mono-num text-stone-900 ml-1.5">
                   {formatCurrency(totalAmount)}
                 </span>
               </div>
             </div>
 
-            {/* Payment Status Buttons */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 onClick={() => handlePaymentStatusChange('pago')}
                 className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
                   paymentStatus === 'pago'
-                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-300'
+                    ? 'bg-emerald-700 text-white border-emerald-800 shadow-md ring-2 ring-emerald-300'
                     : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
                 }`}
               >
@@ -842,8 +840,8 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                 onClick={() => handlePaymentStatusChange('fiado')}
                 className={`p-2.5 rounded-xl border text-xs font-extrabold flex flex-col items-center justify-center gap-1 transition-all ${
                   paymentStatus === 'fiado'
-                    ? 'bg-purple-600 text-white border-purple-700 shadow-md ring-2 ring-purple-300'
-                    : 'bg-white text-purple-800 border-purple-200 hover:bg-purple-50'
+                    ? 'bg-red-600 text-white border-red-700 shadow-md ring-2 ring-red-300'
+                    : 'bg-white text-red-800 border-red-200 hover:bg-red-50'
                 }`}
               >
                 <AlertCircle className="w-4 h-4" />
@@ -851,7 +849,6 @@ export const SaleModal: React.FC<SaleModalProps> = ({
               </button>
             </div>
 
-            {/* Payment method and amount inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <div>
                 <label className="text-xs font-bold text-stone-700 block mb-1">
@@ -889,16 +886,15 @@ export const SaleModal: React.FC<SaleModalProps> = ({
                       setPaymentStatus('parcial');
                     }
                   }}
-                  className="w-full text-xs font-black px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900"
+                  className="w-full text-xs font-black font-mono-num px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900"
                 />
               </div>
             </div>
 
-            {/* Remaining amount banner if pending or partial */}
             {remainingBalance > 0 && (
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-100/90 border border-amber-300 text-amber-950 text-xs font-bold">
                 <span>Saldo Restante a Receber:</span>
-                <span className="text-sm font-black text-rose-700">
+                <span className="text-sm font-black font-mono-num text-red-700">
                   {formatCurrency(remainingBalance)}
                 </span>
               </div>
@@ -912,10 +908,10 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             </label>
             <textarea
               rows={2}
-              placeholder="Ex: Entregar com fita vermelha, laço de presente, sem açúcar refinado, etc."
+              placeholder="Ex: Espetinhos bem passados com farofa, energético bem gelado, entregar no portão."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
+              className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
 
@@ -931,7 +927,7 @@ export const SaleModal: React.FC<SaleModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md shadow-rose-200 hover:shadow-lg transition-all flex items-center gap-1.5"
+              className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md shadow-red-200 hover:shadow-lg transition-all flex items-center gap-1.5"
             >
               {isSubmitting ? (
                 'Salvando...'

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Settings, DollarSign, Store, CheckCircle2, Download, RefreshCw, Flame } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, DollarSign, Store, CheckCircle2, Download, RefreshCw, TreePine } from 'lucide-react';
 import { useData } from '../context/DataContext';
 
 interface SettingsModalProps {
@@ -24,6 +24,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const [localPixKey, setLocalPixKey] = useState<string>(pixKey);
   const [localPixReceiver, setLocalPixReceiver] = useState<string>(pixReceiver);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
+  const [confirmingDemo, setConfirmingDemo] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setLocalBusinessName(businessName);
+      setLocalPixKey(pixKey);
+      setLocalPixReceiver(pixReceiver);
+      setSavedSuccess(false);
+      setConfirmingDemo(false);
+    }
+  }, [isOpen, businessName, pixKey, pixReceiver]);
 
   if (!isOpen) return null;
 
@@ -38,7 +49,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setTimeout(() => {
       setSavedSuccess(false);
       onClose();
-    }, 1200);
+    }, 1000);
   };
 
   const handleExportBackup = () => {
@@ -64,13 +75,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-emerald-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 max-w-lg w-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between bg-gradient-to-r from-orange-50 via-amber-50 to-stone-50">
+        <div className="px-5 py-4 border-b border-red-100 flex items-center justify-between bg-gradient-to-r from-red-50 via-amber-50/70 to-emerald-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-stone-900 text-orange-500 flex items-center justify-center shadow-md">
-              <Flame className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-emerald-900 text-amber-400 flex items-center justify-center shadow-md">
+              <TreePine className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-base font-black text-stone-900">Configurações do Negócio</h2>
@@ -102,7 +113,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 placeholder="Ex: Espeto & Brasa - Espetinhos & Bebidas"
                 value={localBusinessName}
                 onChange={(e) => setLocalBusinessName(e.target.value)}
-                className="w-full text-sm font-semibold pl-9 pr-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                className="w-full text-sm font-semibold pl-9 pr-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               />
             </div>
             <p className="text-[11px] text-stone-400 mt-1">
@@ -110,9 +121,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </p>
           </div>
 
-          <div className="p-3.5 bg-gradient-to-br from-amber-50/70 to-orange-50/70 rounded-2xl border border-orange-200 space-y-3">
+          <div className="p-3.5 bg-gradient-to-br from-emerald-50/70 to-amber-50/70 rounded-2xl border border-emerald-200 space-y-3">
             <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-orange-600" />
+              <DollarSign className="w-4 h-4 text-emerald-700" />
               <span className="text-xs font-black text-stone-900 uppercase tracking-wider">
                 Dados Pix para Cobrança Automática
               </span>
@@ -127,7 +138,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 placeholder="Ex: (11) 98888-7777 ou espeto@brasa.com"
                 value={localPixKey}
                 onChange={(e) => setLocalPixKey(e.target.value)}
-                className="w-full text-xs font-bold px-3 py-2.5 bg-white border border-orange-300 rounded-xl text-stone-900 focus:border-orange-500"
+                className="w-full text-xs font-bold px-3 py-2.5 bg-white border border-emerald-300 rounded-xl text-stone-900 focus:border-emerald-600"
               />
             </div>
 
@@ -140,12 +151,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 placeholder="Ex: Carlos Eduardo dos Santos"
                 value={localPixReceiver}
                 onChange={(e) => setLocalPixReceiver(e.target.value)}
-                className="w-full text-xs font-medium px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900 focus:border-orange-500"
+                className="w-full text-xs font-medium px-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-900 focus:border-emerald-600"
               />
             </div>
 
-            <p className="text-[11px] text-orange-950 font-medium">
-              💡 Ao preencher sua chave Pix, ela será inserida automaticamente nas mensagens de confirmação e cobrança de pedidos pelo WhatsApp!
+            <p className="text-[11px] text-emerald-950 font-medium">
+              Ao preencher sua chave Pix, ela será inserida automaticamente nas mensagens de confirmação e cobrança de pedidos pelo WhatsApp.
             </p>
           </div>
 
@@ -164,19 +175,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 Baixar Backup (JSON)
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('Deseja recarregar os dados de demonstração (espetinhos, refrigerantes, salgados, clientes e vendas de domingo)?')) {
-                    resetToDemoData();
-                    onClose();
-                  }
-                }}
-                className="px-3 py-2 bg-orange-50 hover:bg-orange-100 text-orange-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-orange-200"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Recarregar Exemplos
-              </button>
+              {confirmingDemo ? (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl text-xs">
+                  <span className="font-bold text-red-900">Recarregar exemplos?</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetToDemoData();
+                      setConfirmingDemo(false);
+                      onClose();
+                    }}
+                    className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-black"
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDemo(false)}
+                    className="px-2 py-0.5 text-stone-600 hover:text-stone-900 font-bold"
+                  >
+                    Não
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDemo(true)}
+                  className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-red-200"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Recarregar Exemplos
+                </button>
+              )}
             </div>
           </div>
 
@@ -191,7 +221,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md shadow-orange-950/20 flex items-center gap-1.5 transition-all"
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-black shadow-md shadow-red-950/20 flex items-center gap-1.5 transition-all"
             >
               {savedSuccess ? (
                 <>

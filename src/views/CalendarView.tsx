@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Plus,
-  Sparkles,
   ShoppingBag,
   Flame,
-  CheckCircle2
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import {
@@ -30,9 +28,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 }) => {
   const { sales } = useData();
 
-  // Active view date for calendar navigation
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  // Selected date clicked by user
   const [selectedDateStr, setSelectedDateStr] = useState<string>(() =>
     formatToDateInput(new Date())
   );
@@ -56,7 +52,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const monthLabel = currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  // Group all sales by date string (YYYY-MM-DD)
   const salesByDate = useMemo(() => {
     const map: Record<string, { total: number; count: number; sales: Sale[] }> = {};
     sales.forEach((s) => {
@@ -70,9 +65,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return map;
   }, [sales]);
 
-  // Calendar cells
   const firstDay = new Date(year, month, 1);
-  const startingDay = firstDay.getDay(); // 0 is Sunday
+  const startingDay = firstDay.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells: (number | null)[] = [];
@@ -83,7 +77,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     cells.push(d);
   }
 
-  // Selected date details
   const selectedDayData = salesByDate[selectedDateStr] || { total: 0, count: 0, sales: [] };
   const isSelectedDateSunday = isSundayDate(selectedDateStr);
 
@@ -93,15 +86,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/95 backdrop-blur-md p-5 rounded-3xl border border-emerald-950/15 shadow-xl">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl">📅</span>
+            <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center shrink-0">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
             <h1 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">
               Calendário de Vendas & Domingos na Brasa
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-stone-500 font-medium mt-0.5">
+          <p className="text-xs sm:text-sm text-stone-500 font-medium mt-1">
             Visualize as vendas organizadas por dia, com destaque para os domingos de espetinhos, salgados e bebidas
           </p>
         </div>
@@ -110,9 +105,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <button
             type="button"
             onClick={goToNextSunday}
-            className="px-3.5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-stone-950 font-black rounded-xl text-xs transition-all shadow-xs flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white font-black rounded-xl text-xs transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap"
           >
-            <Flame className="w-3.5 h-3.5 text-stone-950" />
+            <Flame className="w-3.5 h-3.5 text-amber-200" />
             Próximo Domingo
           </button>
 
@@ -127,7 +122,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           <button
             type="button"
             onClick={() => onOpenSaleModalWithDate(selectedDateStr)}
-            className="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5"
+            className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-xl text-xs font-black transition-all shadow-xs flex items-center gap-1.5 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             Lançar Venda em {selectedDateStr.slice(8, 10)}/{selectedDateStr.slice(5, 7)}
@@ -135,11 +130,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Calendar on Left (2 cols), Selected Day Orders on Right (1 col) */}
+      {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Visual Calendar */}
-        <div className="lg:col-span-2 bg-white rounded-3xl p-6 border border-stone-200/80 shadow-xs space-y-4">
-          {/* Month Header / Controls */}
+        <div className="lg:col-span-2 bg-white/95 backdrop-blur-md rounded-3xl p-6 border border-emerald-950/15 shadow-xl space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-stone-100">
             <div className="flex items-center gap-2">
               <button
@@ -164,26 +158,45 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             </div>
 
             <div className="flex items-center gap-2 text-xs">
-              <span className="flex items-center gap-1 font-black text-orange-950 bg-orange-100 px-3 py-1 rounded-full border border-orange-300">
-                <Flame className="w-3.5 h-3.5 text-orange-600" />
+              <span className="flex items-center gap-1 font-black text-red-900 bg-red-100 px-3 py-1 rounded-full border border-red-200">
+                <Flame className="w-3.5 h-3.5 text-red-600" />
                 Coluna de Domingos
               </span>
             </div>
           </div>
 
-          {/* Weekday Labels (Sunday is prominent!) */}
-          <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-black">
-            <div className="py-2 rounded-xl bg-orange-600 text-white shadow-xs">DOMINGO</div>
-            <div className="py-2 text-stone-500 font-semibold">SEGUNDA</div>
-            <div className="py-2 text-stone-500 font-semibold">TERÇA</div>
-            <div className="py-2 text-stone-500 font-semibold">QUARTA</div>
-            <div className="py-2 text-stone-500 font-semibold">QUINTA</div>
-            <div className="py-2 text-stone-500 font-semibold">SEXTA</div>
-            <div className="py-2 text-stone-500 font-semibold">SÁBADO</div>
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center text-[11px] sm:text-xs font-black">
+            <div className="py-2 rounded-xl bg-red-600 text-white shadow-xs">
+              <span className="hidden md:inline">DOMINGO</span>
+              <span className="md:hidden">DOM</span>
+            </div>
+            <div className="py-2 text-stone-500 font-semibold">
+              <span className="hidden md:inline">SEGUNDA</span>
+              <span className="md:hidden">SEG</span>
+            </div>
+            <div className="py-2 text-stone-500 font-semibold">
+              <span className="hidden md:inline">TERÇA</span>
+              <span className="md:hidden">TER</span>
+            </div>
+            <div className="py-2 text-stone-500 font-semibold">
+              <span className="hidden md:inline">QUARTA</span>
+              <span className="md:hidden">QUA</span>
+            </div>
+            <div className="py-2 text-stone-500 font-semibold">
+              <span className="hidden md:inline">QUINTA</span>
+              <span className="md:hidden">QUI</span>
+            </div>
+            <div className="py-2 text-stone-500 font-semibold">
+              <span className="hidden md:inline">SEXTA</span>
+              <span className="md:hidden">SEX</span>
+            </div>
+            <div className="py-2 text-stone-500 font-semibold">
+              <span className="hidden md:inline">SÁBADO</span>
+              <span className="md:hidden">SÁB</span>
+            </div>
           </div>
 
-          {/* Day Grid */}
-          <div className="grid grid-cols-7 gap-1.5">
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
             {cells.map((dayNum, idx) => {
               if (dayNum === null) {
                 return <div key={`empty-${idx}`} className="h-24 sm:h-28 rounded-2xl bg-stone-50/50" />;
@@ -200,37 +213,40 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 <div
                   key={`day-${dayNum}`}
                   onClick={() => setSelectedDateStr(dateStr)}
-                  className={`h-24 sm:h-28 p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group ${
+                  className={`h-24 sm:h-28 p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden group min-w-0 ${
                     isSelected
-                      ? 'ring-2 ring-orange-500 border-orange-500 bg-orange-50/70 shadow-md'
+                      ? 'ring-2 ring-red-600 border-red-600 bg-red-50/70 shadow-md'
                       : isSunday
-                      ? 'bg-gradient-to-br from-orange-50/90 to-amber-50/80 border-orange-200 hover:border-orange-400 hover:shadow-xs'
-                      : 'bg-white border-stone-200 hover:border-orange-300 hover:bg-stone-50/70'
-                  } ${isToday && !isSelected ? 'border-2 border-dashed border-orange-400' : ''}`}
+                      ? 'bg-gradient-to-br from-red-50/85 to-amber-50/75 border-red-200 hover:border-red-400 hover:shadow-xs'
+                      : 'bg-white border-stone-200 hover:border-emerald-400 hover:bg-stone-50/70'
+                  } ${isToday && !isSelected ? 'border-2 border-dashed border-amber-500' : ''}`}
                 >
-                  {/* Top: Day Number & Sunday icon */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1">
                     <span
                       className={`text-xs sm:text-sm font-black ${
                         isSunday
-                          ? 'text-orange-950 bg-orange-200/80 px-1.5 py-0.5 rounded-lg'
+                          ? 'text-red-900 bg-red-200/75 px-1.5 py-0.5 rounded-lg'
                           : 'text-stone-700'
                       }`}
                     >
                       {dayNum}
                     </span>
 
-                    {isSunday && (
-                      <span className="text-[10px] text-orange-700 font-black hidden sm:inline">
-                        🔥 Dom
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isSunday && (
+                        <span className="text-[10px] text-red-700 font-black hidden sm:inline">
+                          Dom
+                        </span>
+                      )}
+                      {isSelected && (
+                        <span className="w-2 h-2 rounded-full bg-red-600 inline-block" />
+                      )}
+                    </div>
                   </div>
 
-                  {/* Middle / Bottom: Sales badges */}
                   {dayData ? (
-                    <div className="space-y-1">
-                      <div className="text-[10px] sm:text-xs font-black text-emerald-800 bg-emerald-100/90 px-1.5 py-0.5 rounded-md truncate">
+                    <div className="space-y-1 min-w-0">
+                      <div className="text-[10px] sm:text-xs font-black font-mono-num text-emerald-800 bg-emerald-100/90 px-1 sm:px-1.5 py-0.5 rounded-md truncate">
                         {formatCurrency(dayData.total)}
                       </div>
                       <div className="text-[9px] sm:text-[10px] text-stone-600 font-bold truncate">
@@ -239,15 +255,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     </div>
                   ) : (
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[10px] font-bold text-orange-600 flex items-center gap-0.5">
+                      <span className="text-[10px] font-bold text-red-600 flex items-center gap-0.5">
                         <Plus className="w-3 h-3" /> Lançar
                       </span>
                     </div>
-                  )}
-
-                  {/* Active selection dot */}
-                  {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500" />
                   )}
                 </div>
               );
@@ -256,14 +267,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         </div>
 
         {/* Selected Day Details Panel */}
-        <div className="bg-white rounded-3xl p-5 border border-stone-200/80 shadow-xs space-y-4 flex flex-col justify-between">
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl p-5 border border-emerald-950/15 shadow-xl space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
-            {/* Header of selected day */}
             <div className="pb-3 border-b border-stone-100">
               <div className="flex items-center justify-between">
                 {isSelectedDateSunday ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-orange-600 text-white shadow-xs">
-                    <Flame className="w-3.5 h-3.5" />
+                  <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-red-600 text-white shadow-xs">
+                    <Flame className="w-3.5 h-3.5 text-amber-200" />
                     DOMINGO DE ESPETOS
                   </span>
                 ) : (
@@ -281,11 +291,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               </h3>
             </div>
 
-            {/* Quick Metrics of the Day */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="bg-stone-50 p-2.5 rounded-xl border border-stone-200">
                 <span className="text-stone-500 block">Total Faturado</span>
-                <span className="text-sm font-extrabold text-stone-900">
+                <span className="text-sm font-extrabold font-mono-num text-stone-900">
                   {formatCurrency(selectedDayData.total)}
                 </span>
               </div>
@@ -297,13 +306,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                 }`}
               >
                 <span className="block font-medium">A Receber / Fiado</span>
-                <span className="text-sm font-black">
+                <span className="text-sm font-black font-mono-num">
                   {formatCurrency(selectedDayPending)}
                 </span>
               </div>
             </div>
 
-            {/* List of Orders on this day */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold text-stone-700 uppercase tracking-wider">
@@ -320,7 +328,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                   <button
                     type="button"
                     onClick={() => onOpenSaleModalWithDate(selectedDateStr)}
-                    className="mt-3 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-1"
+                    className="mt-3 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-xs inline-flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Adicionar Venda
@@ -332,13 +340,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     <div
                       key={sale.id}
                       onClick={() => onEditSale(sale)}
-                      className="p-3 rounded-2xl border border-stone-200 hover:border-orange-300 bg-stone-50/60 hover:bg-orange-50/40 transition-all cursor-pointer space-y-1.5"
+                      className="p-3 rounded-2xl border border-stone-200 hover:border-red-300 bg-stone-50/60 hover:bg-red-50/40 transition-all cursor-pointer space-y-1.5"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-extrabold text-stone-900">
                           {sale.customerName}
                         </span>
-                        <span className="text-xs font-black text-orange-600">
+                        <span className="text-xs font-black font-mono-num text-emerald-700">
                           {formatCurrency(sale.totalAmount)}
                         </span>
                       </div>
@@ -361,7 +369,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         </span>
 
                         <span className="text-stone-400 font-medium">
-                          {sale.deliveryType === 'entrega' ? '🛵 Entrega' : '🛍️ Balcão'}
+                          {sale.deliveryType === 'entrega' ? 'Entrega' : 'Balcão'}
                         </span>
                       </div>
                     </div>
@@ -371,11 +379,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             </div>
           </div>
 
-          {/* Quick Button to Launch on This Day */}
           <button
             type="button"
             onClick={() => onOpenSaleModalWithDate(selectedDateStr)}
-            className="w-full py-3 bg-gradient-to-r from-orange-600 via-amber-500 to-red-500 hover:from-orange-700 hover:to-red-600 text-stone-950 font-black rounded-2xl text-xs shadow-md shadow-orange-950/20 flex items-center justify-center gap-1.5 transition-all"
+            className="w-full py-3 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white font-black rounded-2xl text-xs shadow-md shadow-red-950/20 flex items-center justify-center gap-1.5 transition-all"
           >
             <Plus className="w-4 h-4" />
             Lançar Venda em {selectedDateStr.slice(8, 10)}/{selectedDateStr.slice(5, 7)}

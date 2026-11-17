@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, UtensilsCrossed, Sparkles, CheckCircle2, TrendingUp, Flame, Zap } from 'lucide-react';
+import { X, UtensilsCrossed, CheckCircle2, TrendingUp, AlertCircle } from 'lucide-react';
 import { Product } from '../types';
 import { useData } from '../context/DataContext';
 import { formatCurrency } from '../utils/dateUtils';
@@ -25,6 +25,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   const [description, setDescription] = useState<string>('');
   const [active, setActive] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     if (productToEdit) {
@@ -44,6 +45,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       setDescription('');
       setActive(true);
     }
+    setFormError(null);
   }, [productToEdit, isOpen]);
 
   const numPrice = Number(price) || 0;
@@ -53,12 +55,14 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
     if (!name.trim()) {
-      alert('Informe o nome do item (ex: Espetinho de Alcatra, Monster, Coxinha).');
+      setFormError('Informe o nome do item (ex: Espetinho de Alcatra, Monster, Coxinha).');
       return;
     }
     if (!price || Number(price) <= 0) {
-      alert('Informe um preço de venda válido.');
+      setFormError('Informe um preço de venda válido maior que zero.');
       return;
     }
 
@@ -79,7 +83,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Error saving product:', err);
-      alert('Erro ao salvar produto.');
+      setFormError('Erro ao salvar produto. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
@@ -88,12 +92,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-stone-200 max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-emerald-950/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-emerald-200 max-w-lg w-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between bg-gradient-to-r from-orange-50 via-amber-50 to-stone-50">
+        <div className="px-5 py-4 border-b border-red-100 flex items-center justify-between bg-gradient-to-r from-red-50 via-amber-50/70 to-emerald-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-600 to-amber-500 text-white flex items-center justify-center shadow-md shadow-orange-200">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-600 to-amber-500 text-white flex items-center justify-center shadow-md shadow-red-200">
               <UtensilsCrossed className="w-5 h-5" />
             </div>
             <div>
@@ -116,6 +120,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {formError && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{formError}</span>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-bold text-stone-700 uppercase tracking-wider block mb-1">
               Nome do Item
@@ -126,7 +137,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               placeholder="Ex: Espetinho de Carne Alcatra c/ Farofa"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              className="w-full text-sm font-semibold px-3.5 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
 
@@ -141,19 +152,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                   const newCat = e.target.value;
                   setCategory(newCat);
                   if (newCat === 'Espetinhos') setUnit('espeto');
-                  else if (newCat === 'Energéticos' || newCat === 'Refrigerantes') setUnit('lata');
+                  else if (newCat === 'Energéticos' || newCat === 'Refrigerantes') setUnit('lata 350ml');
                   else if (newCat === 'Cervejas & Bebidas') setUnit('long neck');
                   else if (newCat === 'Salgados') setUnit('unidade');
                 }}
-                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500"
+                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600"
               >
-                <option value="Espetinhos">🥩 Espetinhos</option>
-                <option value="Salgados">🥟 Salgados</option>
-                <option value="Energéticos">⚡ Energéticos</option>
-                <option value="Refrigerantes">🥤 Refrigerantes</option>
-                <option value="Cervejas & Bebidas">🍺 Cervejas & Bebidas</option>
-                <option value="Sobremesas">🍰 Sobremesas</option>
-                <option value="Outros">📦 Outros</option>
+                <option value="Espetinhos">Espetinhos</option>
+                <option value="Salgados">Salgados</option>
+                <option value="Energéticos">Energéticos</option>
+                <option value="Refrigerantes">Refrigerantes</option>
+                <option value="Cervejas & Bebidas">Cervejas & Bebidas</option>
+                <option value="Sobremesas">Sobremesas</option>
+                <option value="Outros">Outros</option>
               </select>
             </div>
 
@@ -164,12 +175,13 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-orange-500"
+                className="w-full text-xs font-semibold px-3 py-2.5 bg-white border border-stone-200 rounded-xl focus:border-emerald-600"
               >
                 <option value="espeto">espeto</option>
                 <option value="unidade">unidade</option>
                 <option value="lata 473ml">lata 473ml</option>
                 <option value="lata 350ml">lata 350ml</option>
+                <option value="lata 250ml">lata 250ml</option>
                 <option value="garrafa 2L">garrafa 2L</option>
                 <option value="long neck">long neck</option>
                 <option value="porção">porção</option>
@@ -179,7 +191,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
           </div>
 
           {/* Pricing & Profit calculation */}
-          <div className="p-3.5 bg-gradient-to-br from-amber-50/80 to-orange-50/80 rounded-2xl border border-orange-200 space-y-3">
+          <div className="p-3.5 bg-gradient-to-br from-emerald-50/80 to-amber-50/70 rounded-2xl border border-emerald-200 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-bold text-stone-800 uppercase tracking-wider block mb-1">
@@ -197,7 +209,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     placeholder="0.00"
                     value={price}
                     onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full text-sm font-black pl-9 pr-3 py-2 bg-white border border-orange-300 rounded-xl text-stone-900 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full text-sm font-black font-mono-num pl-9 pr-3 py-2 bg-white border border-emerald-300 rounded-xl text-stone-900 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
                   />
                 </div>
               </div>
@@ -217,20 +229,19 @@ export const ProductModal: React.FC<ProductModalProps> = ({
                     placeholder="0.00"
                     value={costPrice}
                     onChange={(e) => setCostPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full text-sm font-medium pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-800 focus:border-orange-500"
+                    className="w-full text-sm font-medium font-mono-num pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl text-stone-800 focus:border-emerald-600"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Profit summary card */}
             {numPrice > 0 && (
-              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-amber-200 text-xs">
-                <div className="flex items-center gap-1.5 font-bold text-emerald-700">
+              <div className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-emerald-200 text-xs">
+                <div className="flex items-center gap-1.5 font-bold font-mono-num text-emerald-700">
                   <TrendingUp className="w-4 h-4" />
                   <span>Lucro Unitário: {formatCurrency(unitProfit)}</span>
                 </div>
-                <div className="font-extrabold text-orange-800 px-2.5 py-0.5 rounded-full bg-orange-100">
+                <div className="font-extrabold font-mono-num text-red-800 px-2.5 py-0.5 rounded-full bg-red-100">
                   Margem: {profitMarginPercent}%
                 </div>
               </div>
@@ -246,7 +257,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               placeholder="Ex: Acompanha farofa artesanal temperada e vinagrete especial da casa."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              className="w-full text-xs font-medium p-3 bg-white border border-stone-200 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
             />
           </div>
 
@@ -256,7 +267,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               id="product-active"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
-              className="rounded text-orange-600 focus:ring-orange-500"
+              className="rounded text-red-600 focus:ring-red-500"
             />
             <label htmlFor="product-active" className="text-xs font-semibold text-stone-700 cursor-pointer">
               Disponível para venda no cardápio de domingo
@@ -275,7 +286,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2.5 bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-orange-200 transition-all flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-700 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-md shadow-red-200 transition-all flex items-center gap-1.5"
             >
               <CheckCircle2 className="w-4 h-4" />
               {isSubmitting ? 'Salvando...' : 'Salvar Item'}

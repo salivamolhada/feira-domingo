@@ -20,22 +20,27 @@ service cloud.firestore {
 
     // User scope: Each user has their own isolated subcollections for sales, customers, products, and expenses
     match /users/{userId} {
-      allow read, write: if isOwner(userId) && isValidId(userId);
+      allow get, create, update, delete: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
 
       match /sales/{saleId} {
-        allow read, write: if isOwner(userId) && isValidId(saleId);
+        allow list: if isOwner(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(saleId);
       }
 
       match /customers/{customerId} {
-        allow read, write: if isOwner(userId) && isValidId(customerId);
+        allow list: if isOwner(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(customerId);
       }
 
       match /products/{productId} {
-        allow read, write: if isOwner(userId) && isValidId(productId);
+        allow list: if isOwner(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(productId);
       }
 
       match /expenses/{expenseId} {
-        allow read, write: if isOwner(userId) && isValidId(expenseId);
+        allow list: if isOwner(userId);
+        allow get, create, update, delete: if isOwner(userId) && isValidId(expenseId);
       }
     }
   }
